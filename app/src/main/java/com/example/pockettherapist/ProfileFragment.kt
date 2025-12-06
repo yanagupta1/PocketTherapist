@@ -50,7 +50,6 @@ class ProfileFragment : Fragment() {
         binding.btnSaveProfile.setOnClickListener {
             val ageText = binding.editAge.text.toString()
 
-            // Validate age
             val ageInt = ageText.toIntOrNull()
             if (ageInt == null || ageInt < 0) {
                 Toast.makeText(requireContext(), "Invalid age", Toast.LENGTH_SHORT).show()
@@ -59,10 +58,20 @@ class ProfileFragment : Fragment() {
 
             val gender = binding.spinnerGender.selectedItem.toString()
 
-            UserStore.age = ageText
-            UserStore.gender = gender
+            binding.btnSaveProfile.isEnabled = false
 
-            Toast.makeText(requireContext(), "Profile saved successfully", Toast.LENGTH_SHORT).show()
+            UserStore.updateProfile(
+                age = ageText,
+                gender = gender,
+                onSuccess = {
+                    binding.btnSaveProfile.isEnabled = true
+                    Toast.makeText(requireContext(), "Profile saved successfully", Toast.LENGTH_SHORT).show()
+                },
+                onFailure = { error ->
+                    binding.btnSaveProfile.isEnabled = true
+                    Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
+                }
+            )
         }
 
         // Logout button

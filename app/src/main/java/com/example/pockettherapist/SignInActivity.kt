@@ -24,13 +24,20 @@ class SignInActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            if (!UserStore.signIn(u, p)) {
-                Toast.makeText(this, "Incorrect username/password", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+            binding.btnSignIn.isEnabled = false
 
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
+            UserStore.signIn(
+                username = u,
+                password = p,
+                onSuccess = {
+                    startActivity(Intent(this, MainActivity::class.java))
+                    finish()
+                },
+                onFailure = { error ->
+                    binding.btnSignIn.isEnabled = true
+                    Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
+                }
+            )
         }
 
         binding.txtSignupRedirect.setOnClickListener {
