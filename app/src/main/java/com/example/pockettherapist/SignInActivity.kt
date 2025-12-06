@@ -12,6 +12,15 @@ class SignInActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize UserStore and check for saved login
+        UserStore.init(this)
+        if (UserStore.isLoggedIn()) {
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+            return
+        }
+
         binding = ActivitySigninBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
