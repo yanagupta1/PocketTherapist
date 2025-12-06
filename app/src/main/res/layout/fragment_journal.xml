@@ -16,6 +16,7 @@
         android:layout_height="wrap_content"/>
 
     <ImageView
+        android:id="@+id/micButton"
         android:src="@android:drawable/ic_btn_speak_now"
         android:contentDescription="Mic icon"
         android:layout_width="150dp"
