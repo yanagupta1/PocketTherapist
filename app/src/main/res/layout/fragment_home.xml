@@ -1,109 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:background="@drawable/gradient_bg"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/gradient_bg"
+    android:paddingTop="60dp">
 
-    <LinearLayout
-        android:orientation="vertical"
-        android:padding="24dp"
+<LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:padding="24dp"
+        android:orientation="vertical">
 
         <TextView
-            android:text="Pocket Therapist"
-            android:textSize="30sp"
-            android:textColor="@android:color/white"
-            android:textStyle="bold"
-            android:paddingBottom="26dp"
+            android:id="@+id/txtWelcome"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:text="@string/welcome_title"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:layout_marginBottom="24dp" />
 
-        <!-- Journal Card -->
+        <!-- JOURNAL CARD -->
         <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:background="@drawable/rounded_card"
             android:padding="20dp"
-            android:layout_marginBottom="18dp"
             android:orientation="vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_marginBottom="16dp">
 
             <TextView
-                android:text="🎙️ Voice Journal"
+                android:id="@+id/cardJournal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/journal"
                 android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:textStyle="bold" />
 
             <TextView
-                android:text="Speak your thoughts freely"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:text="@string/journal_desc" />
         </LinearLayout>
 
-        <!-- Insights Card -->
+        <!-- ACTIVITIES NEAR ME -->
         <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:background="@drawable/rounded_card"
             android:padding="20dp"
-            android:layout_marginBottom="18dp"
             android:orientation="vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_marginBottom="16dp">
 
             <TextView
-                android:text="📊 Mood Insights"
+                android:id="@+id/cardActivities"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/activities"
                 android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:textStyle="bold" />
 
             <TextView
-                android:text="Track emotional patterns"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:text="@string/activities_desc" />
         </LinearLayout>
 
-        <!-- Burnout -->
+        <!-- RECOMMENDATIONS -->
         <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:background="@drawable/rounded_card"
             android:padding="20dp"
-            android:layout_marginBottom="18dp"
-            android:orientation="vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:orientation="vertical">
 
             <TextView
-                android:text="🔥 Burnout Detection"
+                android:id="@+id/cardRecommendations"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/recommendations"
                 android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:textStyle="bold" />
 
             <TextView
-                android:text="Early stress warnings"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-        </LinearLayout>
-
-        <!-- Suggestions -->
-        <LinearLayout
-            android:background="@drawable/rounded_card"
-            android:padding="20dp"
-            android:orientation="vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:text="💡 Suggestions"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-
-            <TextView
-                android:text="Personalized interventions"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:text="@string/recommendations_desc" />
         </LinearLayout>
 
     </LinearLayout>

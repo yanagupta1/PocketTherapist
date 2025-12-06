@@ -1,3 +1,39 @@
 <resources>
     <string name="app_name">PocketTherapist</string>
+
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+
+    <string name="sign_in">Sign In</string>
+    <string name="sign_up">Sign Up</string>
+
+    <string name="create_account">Create Account</string>
+
+    <string name="dont_have_account">Do not have an account? Sign up</string>
+    <string name="already_have_account">Already have an account? Sign in</string>
+
+    <string name="welcome_title">Welcome, how are we feeling today?</string>
+
+    <string name="journal">Journal</string>
+    <string name="journal_desc">Write or record your thoughts</string>
+
+    <string name="activities">Activities Near Me</string>
+    <string name="activities_desc">Find wellness events around you</string>
+
+    <string name="recommendations">Recommendations</string>
+    <string name="recommendations_desc">Personalized mental wellness tips</string>
+
+    <string name="profile">Profile</string>
+    <string name="hint_username">Username</string>
+    <string name="hint_age">Age</string>
+    <string name="hint_gender">Gender</string>
+    <string name="save">Save</string>
+
+    <string-array name="gender_options">
+        <item>Male</item>
+        <item>Female</item>
+        <item>Other</item>
+    </string-array>
+
+
 </resources>

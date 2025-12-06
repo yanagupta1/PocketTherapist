@@ -14,20 +14,21 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Load Home by default
+        // Show HOME first (user already logged in)
         replaceFragment(HomeFragment())
 
-        binding.bottomNav.setOnItemSelectedListener {
-
-            when (it.itemId) {
-                R.id.nav_home -> replaceFragment(HomeFragment())
-                R.id.nav_journal -> replaceFragment(JournalFragment())
-                R.id.nav_insights -> replaceFragment(InsightsFragment())
-                R.id.nav_suggestions -> replaceFragment(SuggestionFragment())
-                R.id.nav_profile -> replaceFragment(ProfileFragment())
+        binding.bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> {
+                    replaceFragment(HomeFragment())
+                    true
+                }
+                R.id.nav_profile -> {
+                    replaceFragment(ProfileFragment())
+                    true
+                }
+                else -> false
             }
-
-            true
         }
     }
 
