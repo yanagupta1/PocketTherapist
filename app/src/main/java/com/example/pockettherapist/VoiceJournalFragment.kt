@@ -33,7 +33,13 @@ class VoiceJournalFragment : Fragment() {
         audioHelper = AudioTextHelper(
             requireContext(),
             onResult = { text ->
-                binding.etVoiceText.setText(text)
+
+                // APPEND INSTEAD OF REPLACE
+                val current = binding.etVoiceText.text.toString()
+                val appended = if (current.isEmpty()) text else "$current $text"
+
+                binding.etVoiceText.setText(appended)
+                binding.etVoiceText.setSelection(appended.length)
             },
             onError = { msg ->
                 Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
@@ -45,6 +51,17 @@ class VoiceJournalFragment : Fragment() {
             Toast.makeText(requireContext(), "Listening…", Toast.LENGTH_SHORT).show()
         }
 
+        // CLEAR BUTTON
+        binding.btnClear.setOnClickListener {
+            binding.etVoiceText.setText("")
+        }
+
+        // ANALYZE BUTTON
+        binding.btnAnalyze.setOnClickListener {
+            Toast.makeText(requireContext(), "Analyze coming soon!", Toast.LENGTH_SHORT).show()
+        }
+
+        // BACK BUTTON
         binding.btnBack.setOnClickListener {
             parentFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container, JournalOptionsFragment())
@@ -52,6 +69,7 @@ class VoiceJournalFragment : Fragment() {
                 .commit()
         }
     }
+
 
     private fun checkMicPermission() {
         if (ContextCompat.checkSelfPermission(requireContext(), micPermission)
