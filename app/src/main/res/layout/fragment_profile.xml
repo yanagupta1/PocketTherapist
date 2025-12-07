@@ -27,17 +27,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/profile"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/white" />
+                style="@style/TextAppearance.App.FragmentTitle" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Manage your account settings"
-                android:textSize="14sp"
-                android:textColor="@color/text_light" />
+                style="@style/TextAppearance.App.FragmentSubtitle" />
         </LinearLayout>
 
         <!-- Edit/Cancel Toggle Button -->
@@ -107,9 +104,7 @@
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="16dp"
                 android:text="Display Name"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/white" />
+                style="@style/TextAppearance.App.DisplayName" />
 
             <!-- Username (smaller, read-only) -->
             <TextView
@@ -129,8 +124,7 @@
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="12dp"
                 android:text="Personal Info"
-                android:textSize="16sp"
-                android:textStyle="bold"
+                style="@style/TextAppearance.App.SectionHeader"
                 android:textColor="@color/accent_red" />
 
             <!-- Display Name Input (edit mode) -->
@@ -230,8 +224,7 @@
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="12dp"
                 android:text="About Me"
-                android:textSize="16sp"
-                android:textStyle="bold"
+                style="@style/TextAppearance.App.SectionHeader"
                 android:textColor="@color/accent_red" />
 
             <!-- Bio Input -->
@@ -261,7 +254,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:hint="Interests &amp; Hobbies"
-                app:helperText="e.g., meditation, yoga, journaling"
                 style="@style/ProfileInputStyle">
 
                 <com.google.android.material.textfield.TextInputEditText

@@ -19,9 +19,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/activities"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="@android:color/white" />
+            style="@style/TextAppearance.App.FragmentTitle" />
 
         <TextView
             android:id="@+id/txtSubtitle"
@@ -29,8 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/activities_desc"
-            android:textSize="14sp"
-            android:textColor="@color/text_light" />
+            style="@style/TextAppearance.App.FragmentSubtitle" />
 
     </LinearLayout>
 

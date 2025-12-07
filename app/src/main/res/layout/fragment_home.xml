@@ -23,17 +23,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Journal"
-                android:textColor="@android:color/white"
-                android:textSize="28sp"
-                android:textStyle="bold" />
+                style="@style/TextAppearance.App.FragmentTitle" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Capture your thoughts and feelings"
-                android:textColor="@color/text_light"
-                android:textSize="14sp" />
+                style="@style/TextAppearance.App.FragmentSubtitle" />
 
         </LinearLayout>
 

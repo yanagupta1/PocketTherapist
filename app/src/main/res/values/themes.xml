@@ -7,6 +7,57 @@
 
     <style name="Theme.PocketTherapist" parent="Base.Theme.PocketTherapist" />
 
+    <!-- Base Text Appearance for App -->
+    <style name="TextAppearance.App" parent="TextAppearance.Material3.BodyLarge" />
+
+    <!-- Fragment Title Style - Bold, impactful -->
+    <style name="TextAppearance.App.FragmentTitle">
+        <item name="fontFamily">@font/queensides_medium</item>
+        <item name="android:fontFamily">@font/queensides_medium</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+
+    <!-- Fragment Subtitle Style -->
+    <style name="TextAppearance.App.FragmentSubtitle">
+        <item name="fontFamily">@font/poppins_regular</item>
+        <item name="android:fontFamily">@font/poppins_regular</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/text_light</item>
+    </style>
+
+    <!-- Section Header Style -->
+    <style name="TextAppearance.App.SectionHeader">
+        <item name="fontFamily">@font/poppins_semibold</item>
+        <item name="android:fontFamily">@font/poppins_semibold</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <!-- Journal Entry Title Style -->
+    <style name="TextAppearance.App.JournalTitle">
+        <item name="fontFamily">@font/poppins_medium</item>
+        <item name="android:fontFamily">@font/poppins_medium</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/text_light</item>
+    </style>
+
+    <!-- Journal Entry Body Style -->
+    <style name="TextAppearance.App.JournalBody">
+        <item name="fontFamily">@font/poppins_regular</item>
+        <item name="android:fontFamily">@font/poppins_regular</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/text_light</item>
+    </style>
+
+    <!-- Display Name Style (Profile) -->
+    <style name="TextAppearance.App.DisplayName">
+        <item name="fontFamily">@font/poppins_semibold</item>
+        <item name="android:fontFamily">@font/poppins_semibold</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textColor">@android:color/white</item>
+    </style>
+
     <!-- Circular Image Style for Profile Picture -->
     <style name="CircularImageStyle">
         <item name="cornerFamily">rounded</item>
@@ -16,12 +67,13 @@
     <!-- Profile Input Field Style -->
     <style name="ProfileInputStyle" parent="Widget.Material3.TextInputLayout.OutlinedBox">
         <item name="boxBackgroundColor">@color/dark_card</item>
-        <item name="boxStrokeColor">@color/accent_red</item>
+        <item name="boxStrokeColor">@color/profile_input_stroke</item>
         <item name="boxCornerRadiusTopStart">16dp</item>
         <item name="boxCornerRadiusTopEnd">16dp</item>
         <item name="boxCornerRadiusBottomStart">16dp</item>
         <item name="boxCornerRadiusBottomEnd">16dp</item>
-        <item name="hintTextColor">@color/hint_color</item>
-        <item name="helperTextTextColor">@color/hint_color</item>
+        <item name="hintTextColor">@color/accent_red</item>
+        <item name="android:textColorHint">@color/text_light</item>
+        <item name="helperTextTextColor">@color/text_light</item>
     </style>
 </resources>

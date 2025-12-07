@@ -20,6 +20,8 @@ import androidx.fragment.app.Fragment
 import coil.load
 import coil.transform.CircleCropTransformation
 import com.example.pockettherapist.databinding.FragmentProfileBinding
+import android.text.Editable
+import android.text.TextWatcher
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -131,6 +133,17 @@ class ProfileFragment : Fragment() {
             startActivity(intent)
             requireActivity().finish()
         }
+
+        // Update helper text when interests field changes
+        binding.editInterests.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (isEditMode) {
+                    updateInterestsHelperText(true)
+                }
+            }
+        })
     }
 
     private fun loadProfileData() {
@@ -240,10 +253,23 @@ class ProfileFragment : Fragment() {
         binding.editDisplayName.isEnabled = enabled
         binding.editAge.isEnabled = enabled
         binding.dropdownGender.isEnabled = enabled
+        binding.tilGender.isEnabled = enabled
         binding.editBirthdate.isEnabled = enabled
         binding.editLocation.isEnabled = enabled
         binding.editBio.isEnabled = enabled
         binding.editInterests.isEnabled = enabled
+
+        // Show helper text only in edit mode and when field is empty
+        updateInterestsHelperText(enabled)
+    }
+
+    private fun updateInterestsHelperText(inEditMode: Boolean) {
+        val hasContent = !binding.editInterests.text.isNullOrBlank()
+        binding.tilInterests.helperText = if (inEditMode && !hasContent) {
+            "e.g., meditation, yoga, journaling"
+        } else {
+            null
+        }
     }
 
     private fun cancelEdit() {
