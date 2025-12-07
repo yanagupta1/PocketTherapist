@@ -20,7 +20,7 @@ import java.net.URL
 class RecommendationEngine(private val context: Context) {
 
     private val TAG = "RecommendationEngine"
-    private val GEMINI_API_KEY = "AIzaSyCC5SCVEfG62IX5jK00t3hGTP4Z0QIynQg"
+    private val GEMINI_API_KEY = BuildConfig.GEMINI_API_KEY
     private val GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=$GEMINI_API_KEY"
 
     /**

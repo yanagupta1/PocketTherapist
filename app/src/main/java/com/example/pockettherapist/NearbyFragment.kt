@@ -1,179 +1,169 @@
 package com.example.pockettherapist
 
-import com.example.pockettherapist.api.RetrofitClient
-import com.example.pockettherapist.api.EventbriteResponse
-import com.example.pockettherapist.api.OSMResponse
-
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-
-
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.pockettherapist.adapters.AmenityAdapter
+import com.example.pockettherapist.adapters.TMEventAdapter
+import com.example.pockettherapist.api.OSMResponse
+import com.example.pockettherapist.api.RetrofitClient
+import com.example.pockettherapist.api.TicketmasterResponse
+import com.example.pockettherapist.databinding.FragmentNearbyBinding
 import com.google.android.gms.location.LocationServices
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class NearbyFragment : Fragment() {
 
-    private lateinit var eventsRecycler: RecyclerView
-    private lateinit var amenitiesRecycler: RecyclerView
-    private lateinit var loadingSpinner: ProgressBar
+    private lateinit var binding: FragmentNearbyBinding
 
-    // Ask for location permission using new AndroidX API
-    private val locationPermissionLauncher =
+    private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                loadUserLocation()
-            } else {
-                Toast.makeText(requireContext(), "Location permission required", Toast.LENGTH_SHORT).show()
-            }
+            if (granted) loadUserLocation()
+            else Toast.makeText(requireContext(), "Location permission required", Toast.LENGTH_SHORT).show()
         }
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
+        inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        val root = inflater.inflate(R.layout.fragment_nearby, container, false)
+    ): View {
+        binding = FragmentNearbyBinding.inflate(inflater, container, false)
 
-        eventsRecycler = root.findViewById(R.id.eventsRecycler)
-        amenitiesRecycler = root.findViewById(R.id.amenitiesRecycler)
-        loadingSpinner = root.findViewById(R.id.loadingSpinner)
+        binding.eventsRecycler.layoutManager = LinearLayoutManager(requireContext())
+        binding.amenitiesRecycler.layoutManager = LinearLayoutManager(requireContext())
 
-        return root
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        requestLocationPermission()
+        requestPermission()
     }
 
-    private fun requestLocationPermission() {
-        val fine = Manifest.permission.ACCESS_FINE_LOCATION
-        val coarse = Manifest.permission.ACCESS_COARSE_LOCATION
+    // -------------------------------------------------
+    // PERMISSION HANDLING
+    // -------------------------------------------------
 
-        val fineGranted = ContextCompat.checkSelfPermission(requireContext(), fine) == PackageManager.PERMISSION_GRANTED
-        val coarseGranted = ContextCompat.checkSelfPermission(requireContext(), coarse) == PackageManager.PERMISSION_GRANTED
+    private fun requestPermission() {
+        val permission = Manifest.permission.ACCESS_FINE_LOCATION
+        val granted = ContextCompat.checkSelfPermission(requireContext(), permission)
 
-        if (fineGranted || coarseGranted) {
+        if (granted == PackageManager.PERMISSION_GRANTED) {
             loadUserLocation()
         } else {
-            locationPermissionLauncher.launch(fine)
+            permissionLauncher.launch(permission)
         }
     }
 
+
+
+    @SuppressLint("MissingPermission")
     private fun loadUserLocation() {
+        binding.loadingSpinner.visibility = View.VISIBLE
 
-        if (ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // Permission missing → request again or return
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-            return
-        }
+        val fused = LocationServices.getFusedLocationProviderClient(requireActivity())
 
-        loadingSpinner.visibility = View.VISIBLE
-
-        val fusedClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-
-        fusedClient.lastLocation
-            .addOnSuccessListener { location ->
-                if (location != null) {
-                    val lat = location.latitude
-                    val lng = location.longitude
-
-                    loadEventbriteEvents(lat, lng)
-                    loadOSMAmenities(lat, lng)
+        fused.lastLocation
+            .addOnSuccessListener { loc ->
+                if (loc != null) {
+                    loadTicketmasterEvents(loc.latitude, loc.longitude)
+                    loadOSM(loc.latitude, loc.longitude)
                 } else {
-                    Toast.makeText(requireContext(), "Unable to get location", Toast.LENGTH_SHORT).show()
+                    // fallback: Madison
+                    loadTicketmasterEvents(43.0731, -89.4012)
+                    loadOSM(43.0731, -89.4012)
                 }
             }
             .addOnFailureListener {
-                Toast.makeText(requireContext(), "Failed to get location", Toast.LENGTH_SHORT).show()
+                loadTicketmasterEvents(43.0731, -89.4012)
+                loadOSM(43.0731, -89.4012)
             }
     }
 
+    // -------------------------------------------------
+    // TICKETMASTER EVENTS
+    // -------------------------------------------------
 
-    // -------------------------
-    // API CALL PLACEHOLDERS
-    // -------------------------
+    private fun loadTicketmasterEvents(lat: Double, lng: Double) {
 
-    private fun loadEventbriteEvents(lat: Double, lng: Double) {
+        val apiKey = "0ooZTY3A5ENbdIT4hAFlbVvbpBAOx5MM"  // ← replace!
+        val latlong = "$lat,$lng"
 
-        val token = "Bearer YOUR_EVENTBRITE_API_KEY"
+        RetrofitClient.ticketmaster.getEvents(
+            apiKey = apiKey,
+            latlong = latlong,
+            radius = 10
+        ).enqueue(object : Callback<TicketmasterResponse> {
 
-        RetrofitClient.eventbrite.getEvents(
-            token = token,
-            lat = lat,
-            lng = lng
-        ).enqueue(object : Callback<EventbriteResponse> {
-
-            override fun onResponse(call: Call<EventbriteResponse>, response: Response<EventbriteResponse>) {
-                if (response.isSuccessful) {
-                    val events = response.body()?.events ?: emptyList()
-                    println("Loaded EventBrite events: ${events.size}")
-
-                    // TODO display in RecyclerView
+            override fun onResponse(
+                call: Call<TicketmasterResponse>,
+                response: Response<TicketmasterResponse>
+            ) {
+                if (!response.isSuccessful) {
+                    println("TM error: ${response.code()}")
+                    binding.eventsRecycler.adapter = TMEventAdapter(emptyList())
+                    return
                 }
+
+                val events = response.body()?._embedded?.events ?: emptyList()
+
+                println("Loaded Ticketmaster events: ${events.size}")
+
+                binding.eventsRecycler.adapter = TMEventAdapter(events)
             }
 
-            override fun onFailure(call: Call<EventbriteResponse>, t: Throwable) {
-                println("EventBrite Error: ${t.localizedMessage}")
+            override fun onFailure(call: Call<TicketmasterResponse>, t: Throwable) {
+                println("Ticketmaster failure: ${t.message}")
             }
         })
     }
 
+    // -------------------------------------------------
+    // OSM AMENITIES
+    // -------------------------------------------------
 
-    private fun loadOSMAmenities(lat: Double, lng: Double) {
-
-        val radius = 3000 // meters
+    private fun loadOSM(lat: Double, lng: Double) {
+        val radius = 3000
 
         val query = """
-        [out:json];
-        (
-          node["amenity"="hospital"](around:$radius,$lat,$lng);
-          node["amenity"="clinic"](around:$radius,$lat,$lng);
-          node["amenity"="social_facility"](around:$radius,$lat,$lng);
-          node["leisure"="fitness_centre"](around:$radius,$lat,$lng);
-          node["amenity"="spa"](around:$radius,$lat,$lng);
-          node["amenity"="gym"](around:$radius,$lat,$lng);
-        );
-        out;
-    """.trimIndent()
+            [out:json];
+            (
+              node["amenity"="hospital"](around:$radius,$lat,$lng);
+              node["amenity"="clinic"](around:$radius,$lat,$lng);
+              node["amenity"="gym"](around:$radius,$lat,$lng);
+              node["amenity"="spa"](around:$radius,$lat,$lng);
+              node["leisure"="fitness_centre"](around:$radius,$lat,$lng);
+            );
+            out;
+        """.trimIndent()
 
         RetrofitClient.osm.getAmenities(query)
             .enqueue(object : Callback<OSMResponse> {
 
-                override fun onResponse(call: Call<OSMResponse>, response: Response<OSMResponse>) {
-                    if (response.isSuccessful) {
-                        val amenities = response.body()?.elements ?: emptyList()
-                        println("Loaded OSM amenities: ${amenities.size}")
+                override fun onResponse(
+                    call: Call<OSMResponse>,
+                    response: Response<OSMResponse>
+                ) {
+                    val amenities = response.body()?.elements ?: emptyList()
 
-                        // TODO update RecyclerView
-                    }
+                    binding.amenitiesRecycler.adapter = AmenityAdapter(amenities)
+                    binding.loadingSpinner.visibility = View.GONE
                 }
 
                 override fun onFailure(call: Call<OSMResponse>, t: Throwable) {
-                    println("OSM Error: ${t.localizedMessage}")
+                    binding.loadingSpinner.visibility = View.GONE
+                    println("OSM failure: ${t.message}")
                 }
             })
     }
-
 }

@@ -114,7 +114,7 @@ class HomeFragment : Fragment() {
                         )
                         audioHelper?.stopListening()
                         true
-                    }
+                        }
                     else -> false
                 }
             } else {

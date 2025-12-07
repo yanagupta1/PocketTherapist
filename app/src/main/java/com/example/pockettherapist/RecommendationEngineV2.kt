@@ -21,7 +21,7 @@ import java.net.URLEncoder
 class RecommendationEngineV2(private val context: Context) {
 
     private val TAG = "RecommendationEngineV2"
-    private val GEMINI_API_KEY = "AIzaSyDQTNqMEHEMicuAgZluk2SZuXRPBEplJWE"
+    private val GEMINI_API_KEY = BuildConfig.GEMINI_API_KEY
     private val GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=$GEMINI_API_KEY"
 
     // ==================== DATA CLASSES ====================

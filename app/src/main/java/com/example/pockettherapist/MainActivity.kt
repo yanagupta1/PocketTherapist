@@ -21,7 +21,10 @@ class MainActivity : AppCompatActivity() {
         updateNavIconColor(R.id.nav_home)
 
         binding.bottomNav.setOnItemSelectedListener { item ->
+            val current = supportFragmentManager.findFragmentById(R.id.fragment_container)
+
             when (item.itemId) {
+
                 R.id.nav_home -> {
                     replaceFragment(HomeFragment())
                     updateNavIconColor(R.id.nav_home)
@@ -37,11 +40,13 @@ class MainActivity : AppCompatActivity() {
                     updateNavIconColor(R.id.nav_recommendations)
                     true
                 }
+
                 R.id.nav_profile -> {
                     replaceFragment(ProfileFragment())
                     updateNavIconColor(R.id.nav_profile)
                     true
                 }
+
                 else -> false
             }
         }
@@ -50,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     private fun replaceFragment(fragment: Fragment) {
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, fragment)
+            .addToBackStack(null)
             .commit()
     }
 
