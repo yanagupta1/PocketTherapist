@@ -60,6 +60,11 @@ class RecommendationsFragment : Fragment() {
             loadRecommendations(forceRefresh = true)
         }
 
+        // Only enable pull-to-refresh when scrolled to the top
+        binding.scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            binding.swipeRefresh.isEnabled = scrollY == 0
+        }
+
         // Load recommendations (use cache if valid)
         loadRecommendations(forceRefresh = false)
     }

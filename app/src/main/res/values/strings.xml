@@ -38,6 +38,12 @@
     <string name="about_me">About Me</string>
     <string name="edit_profile">Edit Profile</string>
 
+    <!-- Activities -->
+    <string name="daily_step_goal">Daily Step Goal</string>
+    <string name="edit_goal">Edit goal</string>
+    <string name="set_step_goal">Set Step Goal</string>
+    <string name="enter_step_goal">Enter your daily step goal</string>
+
     <!-- Recommendations -->
     <string name="wellness_tip">Wellness Tip</string>
     <string name="music_for_you">Music for You</string>
