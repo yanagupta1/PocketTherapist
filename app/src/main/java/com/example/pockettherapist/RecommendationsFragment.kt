@@ -15,7 +15,7 @@ class RecommendationsFragment : Fragment() {
 
     private lateinit var binding: FragmentRecommendationsBinding
     private lateinit var songAdapter: SongAdapter
-    private lateinit var recommendationEngine: RecommendationEngineV2
+    private lateinit var recommendationEngine: RecommendationEngine
     private lateinit var spotifyIntegration: SpotifyIntegration
     private lateinit var emotionPredictor: EmotionModelPredictor
     private lateinit var sentimentPredictor: SentimentModelPredictor
@@ -37,7 +37,7 @@ class RecommendationsFragment : Fragment() {
         RecommendationsCache.init(requireContext())
 
         // Initialize services
-        recommendationEngine = RecommendationEngineV2(requireContext())
+        recommendationEngine = RecommendationEngine(requireContext())
         spotifyIntegration = SpotifyIntegration(requireContext())
         emotionPredictor = EmotionModelPredictor(requireContext())
         sentimentPredictor = SentimentModelPredictor(requireContext())
@@ -156,7 +156,7 @@ class RecommendationsFragment : Fragment() {
                 }
 
                 // Create emotion data for recommendation engine
-                val emotionData = RecommendationEngineV2.createEmotionData(
+                val emotionData = RecommendationEngine.createEmotionData(
                     emotion = emotionResult.emotion,
                     emotionScore = emotionResult.confidence,
                     sentiment = sentimentResult.sentiment,
@@ -178,7 +178,7 @@ class RecommendationsFragment : Fragment() {
     private suspend fun loadWellnessSuggestion(
         journalId: String,
         journalText: String,
-        emotionData: RecommendationEngineV2.EmotionData
+        emotionData: RecommendationEngine.EmotionData
     ) {
         try {
             val wellness = recommendationEngine.getWellnessSuggestions(journalText, emotionData)
@@ -211,7 +211,7 @@ class RecommendationsFragment : Fragment() {
 
     private suspend fun loadSongRecommendations(
         journalText: String,
-        emotionData: RecommendationEngineV2.EmotionData
+        emotionData: RecommendationEngine.EmotionData
     ) {
         try {
             // Get song recommendations from Gemini

@@ -1,6 +1,7 @@
 package com.example.pockettherapist
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -8,14 +9,14 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 /**
- * RecommendationEngine class that provides three types of AI-powered recommendations:
- * 1. Song Recommendations - based on user's emotional state
- * 2. Nearby Help - mental health resources and therapists
- * 3. General Suggestions - wellness tips and activities
- *
- * Uses Google Gemini API for generating context-aware recommendations
+ * RecommendationEngine - Enhanced version with:
+ * 1. Detailed wellness technique descriptions
+ * 2. Spotify playlist integration + deep links
+ * 3. Google Maps integration for resources
+ * 4. Fully structured JSON output
  */
 class RecommendationEngine(private val context: Context) {
 
@@ -23,30 +24,21 @@ class RecommendationEngine(private val context: Context) {
     private val GEMINI_API_KEY = BuildConfig.GEMINI_API_KEY
     private val GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=$GEMINI_API_KEY"
 
-    /**
-     * Data class to hold emotion and sentiment analysis results
-     */
     data class EmotionData(
-        val emotion: String,          // Primary emotion: sadness, joy, love, anger, fear, surprise
-        val emotionScore: Float,      // Confidence score for emotion (0-1)
-        val sentiment: String,        // Sentiment: negative, neutral, positive
-        val sentimentScore: Float     // Confidence score for sentiment (0-1)
+        val emotion: String,
+        val emotionScore: Float,
+        val sentiment: String,
+        val sentimentScore: Float
     )
 
-    /**
-     * Data class for song recommendations
-     */
     data class SongRecommendation(
         val songs: List<SongDetail>,
         val mood: String,
         val reasoning: String,
-        val spotifyPlaylistUrl: String,
-        val spotifyWebUrl: String
+        val spotifyPlaylistUrl: String,  // Opens in Spotify app
+        val spotifyWebUrl: String         // Opens in web browser
     )
 
-    /**
-     * Data class for individual song details
-     */
     data class SongDetail(
         val title: String,
         val artist: String,
@@ -54,18 +46,12 @@ class RecommendationEngine(private val context: Context) {
         val spotifyUri: String
     )
 
-    /**
-     * Data class for nearby help resources
-     */
     data class NearbyHelpResource(
         val resources: List<ResourceDetail>,
         val emergencyContacts: List<EmergencyContact>,
         val reasoning: String
     )
 
-    /**
-     * Data class for individual resource details
-     */
     data class ResourceDetail(
         val name: String,
         val type: String,
@@ -78,9 +64,6 @@ class RecommendationEngine(private val context: Context) {
         val longitude: Double?
     )
 
-    /**
-     * Data class for emergency contacts
-     */
     data class EmergencyContact(
         val name: String,
         val number: String,
@@ -88,37 +71,43 @@ class RecommendationEngine(private val context: Context) {
         val type: String  // "call", "text", or "both"
     )
 
-    /**
-     * Data class for general suggestions
-     */
     data class WellnessSuggestion(
         val techniques: List<WellnessTechnique>,
         val reasoning: String
     )
 
-    /**
-     * Data class for individual wellness technique
-     */
     data class WellnessTechnique(
         val name: String,
-        val category: String,  // "breathing", "mindfulness", "movement", "cognitive"
-        val duration: String,  // "2-5 min", "5-10 min"
-        val difficulty: String,  // "easy", "moderate"
+        val category: String,
+        val duration: String,
+        val difficulty: String,
         val description: String,
-        val instructions: List<String>,  // Step-by-step instructions
-        val benefits: List<String>,  // Why this helps
-        val tips: List<String>?  // Optional tips for success
+        val instructions: List<String>,
+        val benefits: List<String>,
+        val tips: List<String>?
+    )
+
+    data class EventRecommendation(
+        val events: List<EventDetail>,
+        val reasoning: String
+    )
+
+    data class EventDetail(
+        val name: String,
+        val date: String,
+        val time: String?,
+        val venue: String,
+        val address: String?,
+        val description: String,
+        val category: String,
+        val url: String?,
+        val latitude: Double?,
+        val longitude: Double?,
+        val googleMapsUrl: String?
     )
 
     // ==================== 1. SONG RECOMMENDATIONS ====================
 
-    /**
-     * Generate song/music recommendations based on user's emotional state and journal text
-     *
-     * @param journalText The user's journal entry
-     * @param emotionData Emotion and sentiment analysis results
-     * @return SongRecommendation with curated songs and mood context
-     */
     suspend fun getSongRecommendations(
         journalText: String,
         emotionData: EmotionData
@@ -179,30 +168,50 @@ Return ONLY the JSON object, nothing else.
             songs.add(SongDetail(
                 title = title,
                 artist = artist,
-                spotifySearchUrl = "https://open.spotify.com/search/${java.net.URLEncoder.encode("$title $artist", "UTF-8")}",
-                spotifyUri = "spotify:search:${java.net.URLEncoder.encode("$title $artist", "UTF-8")}"
+                spotifySearchUrl = createSpotifySearchUrl(title, artist),
+                spotifyUri = createSpotifyUri(title, artist)
             ))
         }
 
+        val mood = jsonResponse.getString("mood")
+        val reasoning = jsonResponse.getString("reasoning")
+
         return SongRecommendation(
             songs = songs,
-            mood = jsonResponse.getString("mood"),
-            reasoning = jsonResponse.getString("reasoning"),
-            spotifyPlaylistUrl = "",
-            spotifyWebUrl = ""
+            mood = mood,
+            reasoning = reasoning,
+            spotifyPlaylistUrl = createSpotifyPlaylistUrl(songs),
+            spotifyWebUrl = createSpotifyWebPlaylistUrl(songs)
         )
+    }
+
+    private fun createSpotifySearchUrl(title: String, artist: String): String {
+        val query = URLEncoder.encode("$title $artist", "UTF-8")
+        return "https://open.spotify.com/search/$query"
+    }
+
+    private fun createSpotifyUri(title: String, artist: String): String {
+        // Spotify URI format: spotify:search:query
+        val query = URLEncoder.encode("$title $artist", "UTF-8")
+        return "spotify:search:$query"
+    }
+
+    private fun createSpotifyPlaylistUrl(songs: List<SongDetail>): String {
+        // Creates a search URL for all songs combined
+        val allSongs = songs.joinToString(" ") { "${it.title} ${it.artist}" }
+        val query = URLEncoder.encode(allSongs, "UTF-8")
+        return "spotify:search:$query"
+    }
+
+    private fun createSpotifyWebPlaylistUrl(songs: List<SongDetail>): String {
+        // Web URL to search for songs
+        val query = songs.joinToString(", ") { "${it.title} - ${it.artist}" }
+        val encoded = URLEncoder.encode(query, "UTF-8")
+        return "https://open.spotify.com/search/$encoded"
     }
 
     // ==================== 2. NEARBY HELP ====================
 
-    /**
-     * Get nearby mental health resources and help based on user's emotional state
-     *
-     * @param journalText The user's journal entry
-     * @param emotionData Emotion and sentiment analysis results
-     * @param location Optional location information for localized resources
-     * @return NearbyHelpResource with mental health resources and emergency contacts
-     */
     suspend fun getNearbyHelp(
         journalText: String,
         emotionData: EmotionData,
@@ -210,23 +219,24 @@ Return ONLY the JSON object, nothing else.
     ): NearbyHelpResource? {
         return withContext(Dispatchers.IO) {
             try {
+                Log.d(TAG, "Getting nearby help for location: $location")
                 val prompt = buildHelpPrompt(journalText, emotionData, location)
                 val response = callGeminiAPI(prompt)
+                Log.d(TAG, "Gemini API response received for amenities")
                 parseNearbyHelp(response)
             } catch (e: Exception) {
-                Log.e(TAG, "Error getting nearby help", e)
+                Log.e(TAG, "Error getting nearby help for location: $location", e)
+                Log.e(TAG, "Exception type: ${e.javaClass.name}")
+                Log.e(TAG, "Exception message: ${e.message}")
+                e.printStackTrace()
                 null
             }
         }
     }
 
-    private fun buildHelpPrompt(
-        journalText: String,
-        emotionData: EmotionData,
-        location: String
-    ): String {
+    private fun buildHelpPrompt(journalText: String, emotionData: EmotionData, location: String): String {
         return """
-You are a mental health resource assistant. Recommend resources for the user's location.
+You are a mental health resource assistant. Recommend 3-5 resources for the user's location.
 
 User Journal: "$journalText"
 Emotion: ${emotionData.emotion} (${emotionData.emotionScore})
@@ -273,12 +283,11 @@ Return ONLY the JSON object, nothing else.
 
         val resourcesArray = jsonResponse.getJSONArray("resources")
         val resources = mutableListOf<ResourceDetail>()
+
         for (i in 0 until resourcesArray.length()) {
             val resObj = resourcesArray.getJSONObject(i)
-            val lat = if (resObj.has("latitude")) resObj.optDouble("latitude", Double.NaN) else null
-            val lon = if (resObj.has("longitude")) resObj.optDouble("longitude", Double.NaN) else null
-            val validLat = if (lat != null && !lat.isNaN()) lat else null
-            val validLon = if (lon != null && !lon.isNaN()) lon else null
+            val lat = if (resObj.has("latitude")) resObj.getDouble("latitude") else null
+            val lon = if (resObj.has("longitude")) resObj.getDouble("longitude") else null
 
             resources.add(ResourceDetail(
                 name = resObj.getString("name"),
@@ -287,16 +296,17 @@ Return ONLY the JSON object, nothing else.
                 phone = resObj.optString("phone").takeIf { it.isNotEmpty() },
                 website = resObj.optString("website").takeIf { it.isNotEmpty() },
                 address = resObj.optString("address").takeIf { it.isNotEmpty() },
-                googleMapsUrl = if (validLat != null && validLon != null) {
-                    "https://www.google.com/maps/search/?api=1&query=$validLat,$validLon"
+                googleMapsUrl = if (lat != null && lon != null) {
+                    createGoogleMapsUrl(lat, lon, resObj.getString("name"))
                 } else null,
-                latitude = validLat,
-                longitude = validLon
+                latitude = lat,
+                longitude = lon
             ))
         }
 
         val emergencyArray = jsonResponse.getJSONArray("emergencyContacts")
         val emergencyContacts = mutableListOf<EmergencyContact>()
+
         for (i in 0 until emergencyArray.length()) {
             val emObj = emergencyArray.getJSONObject(i)
             emergencyContacts.add(EmergencyContact(
@@ -314,22 +324,20 @@ Return ONLY the JSON object, nothing else.
         )
     }
 
-    // ==================== 3. GENERAL SUGGESTIONS ====================
+    private fun createGoogleMapsUrl(lat: Double, lon: Double, placeName: String): String {
+        val query = URLEncoder.encode(placeName, "UTF-8")
+        return "https://www.google.com/maps/search/?api=1&query=$lat,$lon&query=$query"
+    }
 
-    /**
-     * Get general wellness suggestions and activities based on emotional state
-     *
-     * @param journalText The user's journal entry
-     * @param emotionData Emotion and sentiment analysis results
-     * @return WellnessSuggestion with personalized wellness activities and tips
-     */
+    // ==================== 3. WELLNESS SUGGESTIONS ====================
+
     suspend fun getWellnessSuggestions(
         journalText: String,
         emotionData: EmotionData
     ): WellnessSuggestion? {
         return withContext(Dispatchers.IO) {
             try {
-                val prompt = buildSuggestionsPrompt(journalText, emotionData)
+                val prompt = buildWellnessPrompt(journalText, emotionData)
                 val response = callGeminiAPI(prompt)
                 parseWellnessSuggestions(response)
             } catch (e: Exception) {
@@ -339,7 +347,7 @@ Return ONLY the JSON object, nothing else.
         }
     }
 
-    private fun buildSuggestionsPrompt(journalText: String, emotionData: EmotionData): String {
+    private fun buildWellnessPrompt(journalText: String, emotionData: EmotionData): String {
         return """
 You are a wellness coach AI. Recommend detailed wellness techniques.
 
@@ -367,11 +375,14 @@ Return ONLY valid JSON in this EXACT format:
       "benefits": [
         "Activates parasympathetic nervous system",
         "Reduces heart rate and blood pressure",
+        "Improves focus and mental clarity",
         "Immediate anxiety relief"
       ],
       "tips": [
         "Count slowly and steadily",
-        "Focus on the sensation of breathing"
+        "Focus on the sensation of breathing",
+        "Don't force the breath",
+        "Practice regularly for best results"
       ]
     }
   ],
@@ -388,7 +399,7 @@ Each technique MUST include:
 - name, category, duration, difficulty
 - description (1 sentence)
 - instructions (step-by-step list)
-- benefits (3-5 points)
+- benefits (3-5 points why it helps)
 - tips (optional, 2-4 practical tips)
 
 Return ONLY the JSON object, nothing else.
@@ -400,6 +411,7 @@ Return ONLY the JSON object, nothing else.
         val techniquesArray = jsonResponse.getJSONArray("techniques")
 
         val techniques = mutableListOf<WellnessTechnique>()
+
         for (i in 0 until techniquesArray.length()) {
             val techObj = techniquesArray.getJSONObject(i)
 
@@ -425,11 +437,9 @@ Return ONLY the JSON object, nothing else.
 
     // ==================== HELPER FUNCTIONS ====================
 
-    /**
-     * Call Google Gemini API with the given prompt
-     */
     private suspend fun callGeminiAPI(prompt: String): String {
         return withContext(Dispatchers.IO) {
+            Log.d(TAG, "Calling Gemini API...")
             val url = URL(GEMINI_API_URL)
             val connection = url.openConnection() as HttpURLConnection
 
@@ -437,8 +447,9 @@ Return ONLY the JSON object, nothing else.
                 connection.requestMethod = "POST"
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.doOutput = true
+                connection.connectTimeout = 30000  // 30 seconds
+                connection.readTimeout = 30000     // 30 seconds
 
-                // Build request body for Gemini API
                 val requestBody = JSONObject().apply {
                     put("contents", JSONArray().apply {
                         put(JSONObject().apply {
@@ -451,29 +462,41 @@ Return ONLY the JSON object, nothing else.
                     })
                 }
 
-                // Send request
+                Log.d(TAG, "Sending request to Gemini API...")
                 connection.outputStream.use { os ->
                     os.write(requestBody.toString().toByteArray())
                 }
 
-                // Read response
                 val responseCode = connection.responseCode
+                Log.d(TAG, "Gemini API response code: $responseCode")
+
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    Log.d(TAG, "Gemini API response: ${response.take(200)}...")
                     extractTextFromGeminiResponse(response)
                 } else {
                     val errorStream = connection.errorStream?.bufferedReader()?.use { it.readText() }
+                    Log.e(TAG, "Gemini API error response: $errorStream")
                     throw Exception("API Error: $responseCode - $errorStream")
                 }
+            } catch (e: java.net.UnknownHostException) {
+                Log.e(TAG, "No internet connection - UnknownHostException", e)
+                throw Exception("No internet connection. Please check your network settings.")
+            } catch (e: java.net.SocketTimeoutException) {
+                Log.e(TAG, "Request timeout - slow or no internet", e)
+                throw Exception("Request timeout. Please check your internet connection.")
+            } catch (e: java.io.IOException) {
+                Log.e(TAG, "Network error - IOException", e)
+                throw Exception("Network error: ${e.message}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception in callGeminiAPI", e)
+                throw e
             } finally {
                 connection.disconnect()
             }
         }
     }
 
-    /**
-     * Extract text content from Gemini API response
-     */
     private fun extractTextFromGeminiResponse(apiResponse: String): String {
         val jsonResponse = JSONObject(apiResponse)
         val candidates = jsonResponse.getJSONArray("candidates")
@@ -483,25 +506,23 @@ Return ONLY the JSON object, nothing else.
             val parts = content.getJSONArray("parts")
             if (parts.length() > 0) {
                 val text = parts.getJSONObject(0).getString("text")
-                // Extract JSON from markdown code blocks if present
                 return extractJSON(text)
             }
         }
         throw Exception("No valid response from Gemini API")
     }
 
-    /**
-     * Extract JSON from text that might contain markdown code blocks
-     */
     private fun extractJSON(text: String): String {
-        val jsonPattern = Regex("```json\\s*([\\s\\S]*?)\\s*```|```\\s*([\\s\\S]*?)\\s*```|\\{[\\s\\S]*\\}")
-        val match = jsonPattern.find(text)
-        return match?.groupValues?.firstOrNull { it.trim().startsWith("{") } ?: text.trim()
+        // Remove markdown code blocks if present
+        val cleaned = text.replace("```json", "").replace("```", "").trim()
+
+        // Try to extract JSON object
+        val jsonPattern = Regex("\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\}")
+        val match = jsonPattern.find(cleaned)
+
+        return match?.value ?: cleaned
     }
 
-    /**
-     * Convert JSONArray to List<String>
-     */
     private fun jsonArrayToList(jsonArray: JSONArray): List<String> {
         val list = mutableListOf<String>()
         for (i in 0 until jsonArray.length()) {
@@ -510,10 +531,114 @@ Return ONLY the JSON object, nothing else.
         return list
     }
 
+    // ==================== 4. EVENT RECOMMENDATIONS ====================
+
+    suspend fun getEventRecommendations(
+        location: String,
+        emotionData: EmotionData? = null
+    ): EventRecommendation? {
+        return withContext(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "Getting event recommendations for location: $location")
+                val prompt = buildEventPrompt(location, emotionData)
+                val response = callGeminiAPI(prompt)
+                Log.d(TAG, "Gemini API response received for events")
+                parseEventRecommendations(response)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting event recommendations for location: $location", e)
+                Log.e(TAG, "Exception type: ${e.javaClass.name}")
+                Log.e(TAG, "Exception message: ${e.message}")
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    private fun buildEventPrompt(location: String, emotionData: EmotionData?): String {
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date())
+
+        return """
+You are an event recommendation AI. Recommend 3-5 REAL upcoming wellness, mental health, or relaxation events in the user's location.
+
+Location: $location
+Current Date: $today
+${emotionData?.let { "User Emotion: ${it.emotion} (${it.emotionScore})" } ?: ""}
+
+Return ONLY valid JSON in this EXACT format (no markdown, no code blocks):
+{
+  "events": [
+    {
+      "name": "Mindfulness Meditation Workshop",
+      "date": "2025-12-15",
+      "time": "18:00",
+      "venue": "Community Wellness Center",
+      "address": "123 Main St, Portland, OR 97201",
+      "description": "Learn mindfulness meditation techniques for stress relief",
+      "category": "Wellness",
+      "url": "https://example.com/event",
+      "latitude": 45.5152,
+      "longitude": -122.6784
+    }
+  ],
+  "reasoning": "Why these events were selected"
+}
+
+Event Guidelines:
+- Focus on: wellness workshops, meditation classes, yoga sessions, mental health seminars, support groups, nature walks, art therapy, music therapy, fitness classes
+- Include ONLY events that are upcoming (after $today)
+- Use REAL dates in YYYY-MM-DD format (not past dates!)
+- Include specific venue names and addresses
+- Add GPS coordinates (latitude/longitude) for each venue
+- Provide event URLs if available
+- Categories: Wellness, Mental Health, Fitness, Mindfulness, Social, Creative, Nature
+- Make events appropriate for mental wellness and stress relief
+
+IMPORTANT:
+- All dates MUST be future dates (after $today)
+- Use proper date format: YYYY-MM-DD
+- Time in HH:MM format (24-hour)
+- Include real addresses and coordinates for $location
+
+Return ONLY the JSON object, nothing else.
+        """.trimIndent()
+    }
+
+    private fun parseEventRecommendations(response: String): EventRecommendation {
+        val jsonResponse = JSONObject(response)
+        val eventsArray = jsonResponse.getJSONArray("events")
+
+        val events = mutableListOf<EventDetail>()
+
+        for (i in 0 until eventsArray.length()) {
+            val eventObj = eventsArray.getJSONObject(i)
+            val lat = if (eventObj.has("latitude")) eventObj.getDouble("latitude") else null
+            val lon = if (eventObj.has("longitude")) eventObj.getDouble("longitude") else null
+
+            events.add(EventDetail(
+                name = eventObj.getString("name"),
+                date = eventObj.getString("date"),
+                time = eventObj.optString("time").takeIf { it.isNotEmpty() },
+                venue = eventObj.getString("venue"),
+                address = eventObj.optString("address").takeIf { it.isNotEmpty() },
+                description = eventObj.getString("description"),
+                category = eventObj.getString("category"),
+                url = eventObj.optString("url").takeIf { it.isNotEmpty() },
+                latitude = lat,
+                longitude = lon,
+                googleMapsUrl = if (lat != null && lon != null) {
+                    createGoogleMapsUrl(lat, lon, eventObj.getString("venue"))
+                } else null
+            ))
+        }
+
+        return EventRecommendation(
+            events = events,
+            reasoning = jsonResponse.getString("reasoning")
+        )
+    }
+
     companion object {
-        /**
-         * Convenience method to create EmotionData from model outputs
-         */
         fun createEmotionData(
             emotion: String,
             emotionScore: Float,
