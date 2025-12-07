@@ -13,8 +13,10 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.pockettherapist.adapters.AmenityAdapter
+import com.example.pockettherapist.adapters.TMEventAdapter
 import com.example.pockettherapist.api.OSMResponse
 import com.example.pockettherapist.api.RetrofitClient
+import com.example.pockettherapist.api.TicketmasterResponse
 import com.example.pockettherapist.databinding.FragmentNearbyBinding
 import com.google.android.gms.location.LocationServices
 import retrofit2.Call
@@ -25,16 +27,10 @@ class NearbyFragment : Fragment() {
 
     private lateinit var binding: FragmentNearbyBinding
 
-    // -------------------------------
-    // PERMISSION HANDLER
-    // -------------------------------
-    private val locationPermissionLauncher =
+    private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                loadUserLocation()
-            } else {
-                Toast.makeText(requireContext(), "Location permission required", Toast.LENGTH_SHORT).show()
-            }
+            if (granted) loadUserLocation()
+            else Toast.makeText(requireContext(), "Location permission required", Toast.LENGTH_SHORT).show()
         }
 
     override fun onCreateView(
@@ -51,59 +47,93 @@ class NearbyFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        requestLocationPermission()
+        requestPermission()
     }
 
-    // -------------------------------
-    // REQUEST LOCATION PERMISSION
-    // -------------------------------
-    @SuppressLint("MissingPermission")
-    private fun requestLocationPermission() {
-        val fine = Manifest.permission.ACCESS_FINE_LOCATION
-        val granted =
-            ContextCompat.checkSelfPermission(requireContext(), fine) == PackageManager.PERMISSION_GRANTED
+    // -------------------------------------------------
+    // PERMISSION HANDLING
+    // -------------------------------------------------
 
-        if (granted) {
+    private fun requestPermission() {
+        val permission = Manifest.permission.ACCESS_FINE_LOCATION
+        val granted = ContextCompat.checkSelfPermission(requireContext(), permission)
+
+        if (granted == PackageManager.PERMISSION_GRANTED) {
             loadUserLocation()
         } else {
-            locationPermissionLauncher.launch(fine)
+            permissionLauncher.launch(permission)
         }
     }
 
-    // -------------------------------
-    // LOAD DEVICE LOCATION
-    // -------------------------------
+
+
     @SuppressLint("MissingPermission")
     private fun loadUserLocation() {
-
-        // Safety check
-        val fine = Manifest.permission.ACCESS_FINE_LOCATION
-        if (ContextCompat.checkSelfPermission(requireContext(), fine) != PackageManager.PERMISSION_GRANTED) {
-            return
-        }
-
         binding.loadingSpinner.visibility = View.VISIBLE
 
         val fused = LocationServices.getFusedLocationProviderClient(requireActivity())
+
         fused.lastLocation
             .addOnSuccessListener { loc ->
                 if (loc != null) {
+                    loadTicketmasterEvents(loc.latitude, loc.longitude)
                     loadOSM(loc.latitude, loc.longitude)
                 } else {
-                    // fallback = Madison, WI
+                    // fallback: Madison
+                    loadTicketmasterEvents(43.0731, -89.4012)
                     loadOSM(43.0731, -89.4012)
                 }
             }
             .addOnFailureListener {
+                loadTicketmasterEvents(43.0731, -89.4012)
                 loadOSM(43.0731, -89.4012)
             }
     }
 
-    // -------------------------------
-    // OSM (OpenStreetMap) API REQUEST
-    // -------------------------------
+    // -------------------------------------------------
+    // TICKETMASTER EVENTS
+    // -------------------------------------------------
+
+    private fun loadTicketmasterEvents(lat: Double, lng: Double) {
+
+        val apiKey = "0ooZTY3A5ENbdIT4hAFlbVvbpBAOx5MM"  // ← replace!
+        val latlong = "$lat,$lng"
+
+        RetrofitClient.ticketmaster.getEvents(
+            apiKey = apiKey,
+            latlong = latlong,
+            radius = 10
+        ).enqueue(object : Callback<TicketmasterResponse> {
+
+            override fun onResponse(
+                call: Call<TicketmasterResponse>,
+                response: Response<TicketmasterResponse>
+            ) {
+                if (!response.isSuccessful) {
+                    println("TM error: ${response.code()}")
+                    binding.eventsRecycler.adapter = TMEventAdapter(emptyList())
+                    return
+                }
+
+                val events = response.body()?._embedded?.events ?: emptyList()
+
+                println("Loaded Ticketmaster events: ${events.size}")
+
+                binding.eventsRecycler.adapter = TMEventAdapter(events)
+            }
+
+            override fun onFailure(call: Call<TicketmasterResponse>, t: Throwable) {
+                println("Ticketmaster failure: ${t.message}")
+            }
+        })
+    }
+
+    // -------------------------------------------------
+    // OSM AMENITIES
+    // -------------------------------------------------
+
     private fun loadOSM(lat: Double, lng: Double) {
-        val radius = 3000 // meters
+        val radius = 3000
 
         val query = """
             [out:json];
@@ -120,7 +150,10 @@ class NearbyFragment : Fragment() {
         RetrofitClient.osm.getAmenities(query)
             .enqueue(object : Callback<OSMResponse> {
 
-                override fun onResponse(call: Call<OSMResponse>, response: Response<OSMResponse>) {
+                override fun onResponse(
+                    call: Call<OSMResponse>,
+                    response: Response<OSMResponse>
+                ) {
                     val amenities = response.body()?.elements ?: emptyList()
 
                     binding.amenitiesRecycler.adapter = AmenityAdapter(amenities)
@@ -129,7 +162,7 @@ class NearbyFragment : Fragment() {
 
                 override fun onFailure(call: Call<OSMResponse>, t: Throwable) {
                     binding.loadingSpinner.visibility = View.GONE
-                    Toast.makeText(requireContext(), "Failed to load amenities", Toast.LENGTH_SHORT).show()
+                    println("OSM failure: ${t.message}")
                 }
             })
     }

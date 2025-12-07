@@ -5,15 +5,15 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
 
-    private const val EVENTBRITE_BASE_URL = "https://www.eventbriteapi.com/v3/"
     private const val OSM_BASE_URL = "https://overpass-api.de/api/"
+    private const val TICKETMASTER_BASE_URL = "https://app.ticketmaster.com/discovery/v2/"
 
-    val eventbrite: EventbriteApi by lazy {
+    val ticketmaster: TicketmasterApi by lazy {
         Retrofit.Builder()
-            .baseUrl(EVENTBRITE_BASE_URL)
+            .baseUrl(TICKETMASTER_BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(EventbriteApi::class.java)
+            .create(TicketmasterApi::class.java)
     }
 
     val osm: OSMApi by lazy {
