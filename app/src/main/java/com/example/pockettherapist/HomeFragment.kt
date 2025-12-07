@@ -25,12 +25,21 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // When the Journal card is tapped → open the option screen
+        // JOURNAL
         binding.cardJournal.setOnClickListener {
             parentFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container, JournalOptionsFragment())
                 .addToBackStack(null)
                 .commit()
         }
+
+        // ACTIVITIES NEAR ME
+        binding.cardActivities.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, NearbyFragment())
+                .addToBackStack(null)
+                .commit()
+        }
     }
+
 }
