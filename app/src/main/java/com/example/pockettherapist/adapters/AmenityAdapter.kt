@@ -37,7 +37,7 @@ class AmenityAdapter(private val items: List<RecommendationEngine.ResourceDetail
         )
         if (!item.phone.isNullOrEmpty()) {
             phoneLayout?.visibility = View.VISIBLE
-            holder.binding.amenityPhone.text = "📞 ${item.phone}"
+            holder.binding.amenityPhone.text = item.phone
 
             // Make phone number clickable to open dialer
             holder.binding.amenityPhone.setOnClickListener {
@@ -56,7 +56,7 @@ class AmenityAdapter(private val items: List<RecommendationEngine.ResourceDetail
         )
         if (!item.address.isNullOrEmpty()) {
             addressLayout?.visibility = View.VISIBLE
-            holder.binding.amenityAddress.text = "📍 ${item.address}"
+            holder.binding.amenityAddress.text = item.address
 
             // Make address clickable to open Google Maps
             holder.binding.amenityAddress.setOnClickListener {
