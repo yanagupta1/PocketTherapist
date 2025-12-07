@@ -16,3 +16,6 @@ Thumbs.db
 
 # Firebase config (contains API keys - optional, some teams commit this)
 # google-services.json
+
+# Claude Code directory
+.claude/
