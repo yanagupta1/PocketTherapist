@@ -137,42 +137,59 @@ class RecommendationEngine(private val context: Context) {
 
     private fun buildSongPrompt(journalText: String, emotionData: EmotionData): String {
         return """
-            You are a music therapist AI. Based on the user's journal entry and emotional state,
-            recommend 6-7 REAL, EXISTING songs that are available on Spotify. Use actual song titles and artists.
+You are a music therapist AI. Recommend 6-7 REAL Spotify songs based on the user's emotional state.
 
-            User's Journal Entry:
-            "$journalText"
+User Journal: "$journalText"
+Emotion: ${emotionData.emotion} (${emotionData.emotionScore})
+Sentiment: ${emotionData.sentiment} (${emotionData.sentimentScore})
 
-            Detected Emotion: ${emotionData.emotion} (confidence: ${emotionData.emotionScore})
-            Sentiment: ${emotionData.sentiment} (confidence: ${emotionData.sentimentScore})
+Return ONLY valid JSON in this EXACT format (no markdown, no code blocks):
+{
+  "songs": [
+    {"title": "Breathe Me", "artist": "Sia"},
+    {"title": "Weightless", "artist": "Marconi Union"},
+    {"title": "Clair de Lune", "artist": "Claude Debussy"}
+  ],
+  "mood": "Calming and soothing",
+  "reasoning": "Why these songs help"
+}
 
-            IMPORTANT: Recommend ONLY real songs that exist on Spotify. Format each as "Song Title - Artist Name".
+Guidelines by emotion:
+- sadness: Fix You-Coldplay, Lean on Me-Bill Withers, The Scientist-Coldplay
+- fear/anxiety: Weightless-Marconi Union, Clair de Lune-Debussy, Breathe Me-Sia
+- anger: Smells Like Teen Spirit-Nirvana, Break Stuff-Limp Bizkit
+- joy: Happy-Pharrell Williams, Walking on Sunshine-Katrina and the Waves
+- love: Can't Help Falling in Love-Elvis Presley, At Last-Etta James
+- surprise: Eye of the Tiger-Survivor, Don't Stop Believin'-Journey
 
-            Provide recommendations in the following JSON format:
-            {
-                "songs": ["Breathe Me - Sia", "Weightless - Marconi Union", ...],
-                "mood": "Brief mood description",
-                "reasoning": "Why these specific songs were recommended"
-            }
-
-            Guidelines based on emotion:
-            - If sad: suggest empathetic yet uplifting songs (e.g., "Fix You - Coldplay", "Lean on Me - Bill Withers")
-            - If anxious: suggest calming, ambient music (e.g., "Weightless - Marconi Union", "Clair de Lune - Debussy")
-            - If angry: suggest cathartic rock/alternative (e.g., "Smells Like Teen Spirit - Nirvana", "Break Stuff - Limp Bizkit")
-            - If joyful: suggest upbeat pop/dance (e.g., "Happy - Pharrell Williams", "Walking on Sunshine - Katrina and the Waves")
-            - If fearful: suggest comforting, reassuring music (e.g., "Here Comes the Sun - The Beatles", "Don't Worry Be Happy - Bobby McFerrin")
-            - If surprised: suggest energizing, dynamic music (e.g., "Eye of the Tiger - Survivor", "Don't Stop Believin' - Journey")
-
-            Return ONLY valid JSON with REAL song titles that exist on Spotify, no additional text.
+Return ONLY the JSON object, nothing else.
         """.trimIndent()
     }
 
     private fun parseSongRecommendation(response: String): SongRecommendation {
         val jsonResponse = JSONObject(response)
+        val songsArray = jsonResponse.getJSONArray("songs")
+
+        val songs = mutableListOf<SongDetail>()
+        for (i in 0 until songsArray.length()) {
+            val songObj = songsArray.getJSONObject(i)
+            val title = songObj.getString("title")
+            val artist = songObj.getString("artist")
+
+            songs.add(SongDetail(
+                title = title,
+                artist = artist,
+                spotifySearchUrl = "https://open.spotify.com/search/${java.net.URLEncoder.encode("$title $artist", "UTF-8")}",
+                spotifyUri = "spotify:search:${java.net.URLEncoder.encode("$title $artist", "UTF-8")}"
+            ))
+        }
+
         return SongRecommendation(
-            songs = jsonArrayToList(jsonResponse.getJSONArray("songs")),
+            songs = songs,
             mood = jsonResponse.getString("mood"),
-            reasoning = jsonResponse.getString("reasoning")
+            reasoning = jsonResponse.getString("reasoning"),
+            spotifyPlaylistUrl = "",
+            spotifyWebUrl = ""
         )
     }
 
@@ -209,47 +226,90 @@ class RecommendationEngine(private val context: Context) {
         location: String
     ): String {
         return """
-            You are a mental health resource assistant. Based on the user's journal entry and emotional state,
-            recommend appropriate mental health resources, support services, and emergency contacts.
+You are a mental health resource assistant. Recommend resources for the user's location.
 
-            User's Journal Entry:
-            "$journalText"
+User Journal: "$journalText"
+Emotion: ${emotionData.emotion} (${emotionData.emotionScore})
+Sentiment: ${emotionData.sentiment} (${emotionData.sentimentScore})
+Location: $location
 
-            Detected Emotion: ${emotionData.emotion} (confidence: ${emotionData.emotionScore})
-            Sentiment: ${emotionData.sentiment} (confidence: ${emotionData.sentimentScore})
-            Location Context: $location
+Return ONLY valid JSON in this EXACT format:
+{
+  "resources": [
+    {
+      "name": "Crisis Connections",
+      "type": "Crisis Line",
+      "description": "24/7 crisis support",
+      "phone": "866-427-4747",
+      "website": "https://www.crisisconnections.org",
+      "address": "123 Main St, City, State 12345",
+      "latitude": 47.6062,
+      "longitude": -122.3321
+    }
+  ],
+  "emergencyContacts": [
+    {
+      "name": "988 Suicide & Crisis Lifeline",
+      "number": "988",
+      "description": "24/7 crisis support",
+      "type": "both"
+    }
+  ],
+  "reasoning": "Why these resources were recommended"
+}
 
-            Provide recommendations in the following JSON format:
-            {
-                "resources": [
-                    "Resource type or service 1",
-                    "Resource type or service 2",
-                    ...
-                ],
-                "emergencyContacts": [
-                    "National Suicide Prevention Lifeline: 988",
-                    "Crisis Text Line: Text HOME to 741741",
-                    ...
-                ],
-                "reasoning": "Why these resources were recommended"
-            }
+Include:
+- Local crisis lines, therapy centers, support groups
+- Google Maps coordinates (latitude/longitude)
+- Emergency contacts: 988, Crisis Text Line
+- Type: "call", "text", or "both"
 
-            Consider:
-            - If severe distress is detected, prioritize crisis hotlines
-            - Suggest therapy types (CBT, DBT, EMDR) based on emotion
-            - Include support groups for specific emotions (grief, anxiety, etc.)
-            - Recommend self-help resources and apps
-            - Include general mental health helplines
-
-            Return ONLY valid JSON, no additional text.
+Return ONLY the JSON object, nothing else.
         """.trimIndent()
     }
 
     private fun parseNearbyHelp(response: String): NearbyHelpResource {
         val jsonResponse = JSONObject(response)
+
+        val resourcesArray = jsonResponse.getJSONArray("resources")
+        val resources = mutableListOf<ResourceDetail>()
+        for (i in 0 until resourcesArray.length()) {
+            val resObj = resourcesArray.getJSONObject(i)
+            val lat = if (resObj.has("latitude")) resObj.optDouble("latitude", Double.NaN) else null
+            val lon = if (resObj.has("longitude")) resObj.optDouble("longitude", Double.NaN) else null
+            val validLat = if (lat != null && !lat.isNaN()) lat else null
+            val validLon = if (lon != null && !lon.isNaN()) lon else null
+
+            resources.add(ResourceDetail(
+                name = resObj.getString("name"),
+                type = resObj.getString("type"),
+                description = resObj.getString("description"),
+                phone = resObj.optString("phone").takeIf { it.isNotEmpty() },
+                website = resObj.optString("website").takeIf { it.isNotEmpty() },
+                address = resObj.optString("address").takeIf { it.isNotEmpty() },
+                googleMapsUrl = if (validLat != null && validLon != null) {
+                    "https://www.google.com/maps/search/?api=1&query=$validLat,$validLon"
+                } else null,
+                latitude = validLat,
+                longitude = validLon
+            ))
+        }
+
+        val emergencyArray = jsonResponse.getJSONArray("emergencyContacts")
+        val emergencyContacts = mutableListOf<EmergencyContact>()
+        for (i in 0 until emergencyArray.length()) {
+            val emObj = emergencyArray.getJSONObject(i)
+            emergencyContacts.add(EmergencyContact(
+                name = emObj.getString("name"),
+                number = emObj.getString("number"),
+                description = emObj.getString("description"),
+                type = emObj.getString("type")
+            ))
+        }
+
         return NearbyHelpResource(
-            resources = jsonArrayToList(jsonResponse.getJSONArray("resources")),
-            emergencyContacts = jsonArrayToList(jsonResponse.getJSONArray("emergencyContacts")),
+            resources = resources,
+            emergencyContacts = emergencyContacts,
             reasoning = jsonResponse.getString("reasoning")
         )
     }
@@ -281,50 +341,84 @@ class RecommendationEngine(private val context: Context) {
 
     private fun buildSuggestionsPrompt(journalText: String, emotionData: EmotionData): String {
         return """
-            You are a wellness coach AI. Based on the user's journal entry and emotional state,
-            suggest practical wellness activities, coping strategies, and micro-interventions.
+You are a wellness coach AI. Recommend detailed wellness techniques.
 
-            User's Journal Entry:
-            "$journalText"
+User Journal: "$journalText"
+Emotion: ${emotionData.emotion} (${emotionData.emotionScore})
+Sentiment: ${emotionData.sentiment} (${emotionData.sentimentScore})
 
-            Detected Emotion: ${emotionData.emotion} (confidence: ${emotionData.emotionScore})
-            Sentiment: ${emotionData.sentiment} (confidence: ${emotionData.sentimentScore})
+Return ONLY valid JSON in this EXACT format:
+{
+  "techniques": [
+    {
+      "name": "Box Breathing",
+      "category": "breathing",
+      "duration": "2-5 min",
+      "difficulty": "easy",
+      "description": "A simple breathing technique to calm anxiety",
+      "instructions": [
+        "Sit comfortably with your back straight",
+        "Inhale slowly through your nose for 4 counts",
+        "Hold your breath for 4 counts",
+        "Exhale slowly through your mouth for 4 counts",
+        "Hold empty lungs for 4 counts",
+        "Repeat 5-10 times"
+      ],
+      "benefits": [
+        "Activates parasympathetic nervous system",
+        "Reduces heart rate and blood pressure",
+        "Immediate anxiety relief"
+      ],
+      "tips": [
+        "Count slowly and steadily",
+        "Focus on the sensation of breathing"
+      ]
+    }
+  ],
+  "reasoning": "Why these techniques were selected"
+}
 
-            Provide recommendations in the following JSON format:
-            {
-                "suggestions": [
-                    "Practical tip or coping strategy 1",
-                    "Practical tip or coping strategy 2",
-                    ...
-                ],
-                "activities": [
-                    "Specific activity 1 (2-5 min)",
-                    "Specific activity 2 (5-10 min)",
-                    ...
-                ],
-                "reasoning": "Why these suggestions were recommended"
-            }
+Recommend 5-7 techniques from categories:
+- breathing: Box Breathing, 4-7-8 Breathing, Diaphragmatic Breathing
+- mindfulness: 5-4-3-2-1 Grounding, Body Scan, Mindful Walking
+- movement: Gentle Stretching, Progressive Muscle Relaxation, Yoga Poses
+- cognitive: Gratitude Journaling, Positive Affirmations, Thought Challenging
 
-            Focus on:
-            - Micro-interventions (2-10 minutes)
-            - Evidence-based coping strategies
-            - Breathing exercises for anxiety/stress
-            - Grounding techniques for fear/panic
-            - Physical activities for anger/frustration
-            - Gratitude exercises for sadness
-            - Energy-boosting activities for low mood
-            - Creative outlets for emotional expression
+Each technique MUST include:
+- name, category, duration, difficulty
+- description (1 sentence)
+- instructions (step-by-step list)
+- benefits (3-5 points)
+- tips (optional, 2-4 practical tips)
 
-            Make suggestions specific, actionable, and brief.
-            Return ONLY valid JSON, no additional text.
+Return ONLY the JSON object, nothing else.
         """.trimIndent()
     }
 
     private fun parseWellnessSuggestions(response: String): WellnessSuggestion {
         val jsonResponse = JSONObject(response)
+        val techniquesArray = jsonResponse.getJSONArray("techniques")
+
+        val techniques = mutableListOf<WellnessTechnique>()
+        for (i in 0 until techniquesArray.length()) {
+            val techObj = techniquesArray.getJSONObject(i)
+
+            techniques.add(WellnessTechnique(
+                name = techObj.getString("name"),
+                category = techObj.getString("category"),
+                duration = techObj.getString("duration"),
+                difficulty = techObj.getString("difficulty"),
+                description = techObj.getString("description"),
+                instructions = jsonArrayToList(techObj.getJSONArray("instructions")),
+                benefits = jsonArrayToList(techObj.getJSONArray("benefits")),
+                tips = if (techObj.has("tips")) {
+                    jsonArrayToList(techObj.getJSONArray("tips"))
+                } else null
+            ))
+        }
+
         return WellnessSuggestion(
-            suggestions = jsonArrayToList(jsonResponse.getJSONArray("suggestions")),
-            activities = jsonArrayToList(jsonResponse.getJSONArray("activities")),
+            techniques = techniques,
             reasoning = jsonResponse.getString("reasoning")
         )
     }

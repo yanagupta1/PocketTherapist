@@ -71,7 +71,7 @@ class RecommendationEngineExample(private val context: Context) {
                 Log.d(TAG, "Reasoning: ${songRecs.reasoning}")
                 Log.d(TAG, "Recommended Songs:")
                 songRecs.songs.forEachIndexed { index, song ->
-                    Log.d(TAG, "  ${index + 1}. $song")
+                    Log.d(TAG, "  ${index + 1}. ${song.title} - ${song.artist}")
                 }
             } else {
                 Log.e(TAG, "Failed to get song recommendations")
@@ -88,11 +88,12 @@ class RecommendationEngineExample(private val context: Context) {
                 Log.d(TAG, "Reasoning: ${helpResources.reasoning}")
                 Log.d(TAG, "Recommended Resources:")
                 helpResources.resources.forEachIndexed { index, resource ->
-                    Log.d(TAG, "  ${index + 1}. $resource")
+                    Log.d(TAG, "  ${index + 1}. ${resource.name} (${resource.type})")
+                    Log.d(TAG, "     ${resource.description}")
                 }
                 Log.d(TAG, "Emergency Contacts:")
                 helpResources.emergencyContacts.forEach { contact ->
-                    Log.d(TAG, "  - $contact")
+                    Log.d(TAG, "  - ${contact.name}: ${contact.number}")
                 }
             } else {
                 Log.e(TAG, "Failed to get help resources")
@@ -103,13 +104,11 @@ class RecommendationEngineExample(private val context: Context) {
             val wellnessSuggestions = recommendationEngine.getWellnessSuggestions(journalText, emotionData)
             if (wellnessSuggestions != null) {
                 Log.d(TAG, "Reasoning: ${wellnessSuggestions.reasoning}")
-                Log.d(TAG, "Wellness Tips:")
-                wellnessSuggestions.suggestions.forEachIndexed { index, suggestion ->
-                    Log.d(TAG, "  ${index + 1}. $suggestion")
-                }
-                Log.d(TAG, "Activities:")
-                wellnessSuggestions.activities.forEachIndexed { index, activity ->
-                    Log.d(TAG, "  ${index + 1}. $activity")
+                Log.d(TAG, "Wellness Techniques:")
+                wellnessSuggestions.techniques.forEachIndexed { index, technique ->
+                    Log.d(TAG, "  ${index + 1}. ${technique.name} (${technique.category}, ${technique.duration})")
+                    Log.d(TAG, "     Description: ${technique.description}")
+                    Log.d(TAG, "     Benefits: ${technique.benefits.joinToString(", ")}")
                 }
             } else {
                 Log.e(TAG, "Failed to get wellness suggestions")
@@ -199,7 +198,7 @@ class RecommendationEngineExample(private val context: Context) {
         Log.d(TAG, "  Emotion: ${emotion.emotion} ${emotionPredictor.getEmotionEmoji(emotion.emotion)}")
         Log.d(TAG, "  Sentiment: ${sentiment.sentiment} ${sentimentPredictor.getSentimentEmoji(sentiment.sentiment)}")
         if (songs != null) {
-            Log.d(TAG, "  Recommended: ${songs.songs.take(3).joinToString(", ")}")
+            Log.d(TAG, "  Recommended: ${songs.songs.take(3).joinToString(", ") { "${it.title} - ${it.artist}" }}")
         }
     }
 

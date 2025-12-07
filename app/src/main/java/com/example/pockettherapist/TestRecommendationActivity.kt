@@ -256,7 +256,7 @@ class TestRecommendationActivity : AppCompatActivity() {
                     output.append("Mood: ${songRecs.mood}\n\n")
                     output.append("Recommended Songs:\n")
                     songRecs.songs.forEachIndexed { index, song ->
-                        output.append("  ${index + 1}. $song\n")
+                        output.append("  ${index + 1}. ${song.title} - ${song.artist}\n")
                     }
                     output.append("\nReasoning:\n${songRecs.reasoning}\n\n")
                 } else {
@@ -273,11 +273,14 @@ class TestRecommendationActivity : AppCompatActivity() {
                 if (helpResources != null) {
                     output.append("Resources:\n")
                     helpResources.resources.forEachIndexed { index, resource ->
-                        output.append("  ${index + 1}. $resource\n")
+                        output.append("  ${index + 1}. ${resource.name} (${resource.type})\n")
+                        output.append("     ${resource.description}\n")
+                        resource.phone?.let { output.append("     Phone: $it\n") }
+                        resource.website?.let { output.append("     Web: $it\n") }
                     }
                     output.append("\nEmergency Contacts:\n")
                     helpResources.emergencyContacts.forEach { contact ->
-                        output.append("  📞 $contact\n")
+                        output.append("  📞 ${contact.name}: ${contact.number} (${contact.type})\n")
                     }
                     output.append("\nReasoning:\n${helpResources.reasoning}\n\n")
                 } else {
@@ -292,15 +295,14 @@ class TestRecommendationActivity : AppCompatActivity() {
 
                 val wellnessSuggestions = recommendationEngine.getWellnessSuggestions(journalText, emotionData)
                 if (wellnessSuggestions != null) {
-                    output.append("Wellness Tips:\n")
-                    wellnessSuggestions.suggestions.forEachIndexed { index, suggestion ->
-                        output.append("  ${index + 1}. $suggestion\n")
+                    output.append("Wellness Techniques:\n")
+                    wellnessSuggestions.techniques.forEachIndexed { index, technique ->
+                        output.append("  ${index + 1}. ${technique.name}\n")
+                        output.append("     Category: ${technique.category} | Duration: ${technique.duration}\n")
+                        output.append("     ${technique.description}\n")
+                        output.append("     Benefits: ${technique.benefits.take(2).joinToString(", ")}\n\n")
                     }
-                    output.append("\nActivities (2-10 min):\n")
-                    wellnessSuggestions.activities.forEachIndexed { index, activity ->
-                        output.append("  ${index + 1}. $activity\n")
-                    }
-                    output.append("\nReasoning:\n${wellnessSuggestions.reasoning}\n\n")
+                    output.append("Reasoning:\n${wellnessSuggestions.reasoning}\n\n")
                 } else {
                     output.append("❌ Failed to get wellness suggestions\n\n")
                 }

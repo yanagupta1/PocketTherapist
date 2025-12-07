@@ -70,7 +70,7 @@ class EmotionModelPredictor(private val context: Context) {
             } catch (e: Exception) {
                 Log.e(TAG, "Error predicting emotion", e)
                 // Fallback to rule-based emotion detection
-                ruleBased EmotionDetection(text)
+                ruleBasedEmotionDetection(text)
             }
         }
     }
