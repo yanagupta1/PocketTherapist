@@ -38,12 +38,14 @@
                 android:layout_height="wrap_content"
                 android:text="@string/journal"
                 android:textSize="20sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:textColor="@color/text_light" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/journal_desc" />
+                android:text="@string/journal_desc"
+                android:textColor="@color/text_light" />
         </LinearLayout>
 
         <!-- ACTIVITIES NEAR ME -->
@@ -63,12 +65,14 @@
                 android:layout_height="wrap_content"
                 android:text="@string/activities"
                 android:textSize="20sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:textColor="@color/text_light" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/activities_desc" />
+                android:text="@string/activities_desc"
+                android:textColor="@color/text_light" />
         </LinearLayout>
 
         <!-- RECOMMENDATIONS -->
@@ -87,12 +91,14 @@
                 android:layout_height="wrap_content"
                 android:text="@string/recommendations"
                 android:textSize="20sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:textColor="@color/text_light" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/recommendations_desc" />
+                android:text="@string/recommendations_desc"
+                android:textColor="@color/text_light" />
         </LinearLayout>
 
     </LinearLayout>

@@ -1,8 +1,13 @@
 <resources>
-    <color name="bg_start">#7F7FD5</color>
-    <color name="bg_end">#86A8E7</color>
+    <color name="bg_start">#1A1A2E</color>
+    <color name="bg_end">#16213E</color>
     <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="dark_surface">#1E1E1E</color>
+    <color name="dark_card">#2D2D2D</color>
     <color name="text_dark">#222222</color>
+    <color name="text_light">#E0E0E0</color>
     <color name="accent">#6A5AE0</color>
     <color name="light_gray">#DADADA</color>
+    <color name="dark_gray">#3D3D3D</color>
 </resources>

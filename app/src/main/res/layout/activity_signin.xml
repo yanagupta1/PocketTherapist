@@ -50,8 +50,8 @@
             android:layout_height="wrap_content"
             android:text="@string/sign_in"
             android:textAllCaps="false"
-            android:backgroundTint="@color/white"
-            android:textColor="@color/accent"
+            android:backgroundTint="@color/accent"
+            android:textColor="@color/white"
             android:padding="12dp"
             android:layout_marginBottom="20dp" />
 

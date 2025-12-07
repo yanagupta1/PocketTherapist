@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="24dp"
-    android:background="#F8F5FF">
+    android:background="@color/dark_surface">
 
     <!-- Back Button -->
     <ImageView
@@ -13,7 +13,7 @@
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:src="@android:drawable/ic_media_previous"
-        app:tint="#6A5AE0"
+        app:tint="@color/text_light"
         android:padding="4dp"
         android:contentDescription="Back"
         android:layout_marginBottom="20dp" />
