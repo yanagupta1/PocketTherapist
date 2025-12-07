@@ -14,19 +14,33 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Show HOME first (user already logged in)
-        replaceFragment(HomeFragment())
+        // Load home ONLY on first creation
+        if (savedInstanceState == null) {
+            replaceFragment(HomeFragment())
+            binding.bottomNav.selectedItemId = R.id.nav_home
+        }
 
         binding.bottomNav.setOnItemSelectedListener { item ->
+            val current = supportFragmentManager.findFragmentById(R.id.fragment_container)
+
             when (item.itemId) {
+
                 R.id.nav_home -> {
-                    replaceFragment(HomeFragment())
+                    // Avoid reloading if already on Home
+                    if (current !is HomeFragment) {
+                        replaceFragment(HomeFragment())
+                    }
                     true
                 }
+
                 R.id.nav_profile -> {
-                    replaceFragment(ProfileFragment())
+                    // Avoid reloading if already on Profile
+                    if (current !is ProfileFragment) {
+                        replaceFragment(ProfileFragment())
+                    }
                     true
                 }
+
                 else -> false
             }
         }
@@ -35,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     private fun replaceFragment(fragment: Fragment) {
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, fragment)
+            .addToBackStack(null)
             .commit()
     }
 }
