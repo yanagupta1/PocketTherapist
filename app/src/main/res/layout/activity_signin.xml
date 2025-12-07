@@ -31,7 +31,9 @@
             android:inputType="text"
             android:background="@drawable/rounded_card"
             android:padding="16dp"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            android:textColor="@color/text_light"
+            android:textColorHint="@color/hint_color" />
 
         <EditText
             android:id="@+id/etPassword"
@@ -42,7 +44,9 @@
             android:inputType="textPassword"
             android:background="@drawable/rounded_card"
             android:padding="16dp"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="24dp"
+            android:textColor="@color/text_light"
+            android:textColorHint="@color/hint_color" />
 
         <Button
             android:id="@+id/btnSignIn"

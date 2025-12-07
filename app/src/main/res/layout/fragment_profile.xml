@@ -29,7 +29,9 @@
             android:background="@drawable/rounded_card"
             android:hint="@string/hint_username"
             android:enabled="false"
-            android:padding="16dp" />
+            android:padding="16dp"
+            android:textColor="@color/text_light"
+            android:textColorHint="@color/hint_color" />
 
         <!-- AGE -->
         <EditText
@@ -40,7 +42,9 @@
             android:hint="@string/hint_age"
             android:layout_marginTop="16dp"
             android:padding="16dp"
-            android:inputType="number" />
+            android:inputType="number"
+            android:textColor="@color/text_light"
+            android:textColorHint="@color/hint_color" />
 
         <!-- GENDER -->
         <Spinner

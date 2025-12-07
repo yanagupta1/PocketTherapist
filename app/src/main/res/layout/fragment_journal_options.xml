@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Text Journal"
-        android:backgroundTint="#6A5AE0"
+        android:backgroundTint="@color/accent"
         android:textColor="@android:color/white"
         android:padding="16dp"
         android:layout_marginBottom="20dp" />
@@ -22,7 +22,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Voice Note Journal"
-        android:backgroundTint="#6A5AE0"
+        android:backgroundTint="@color/accent"
         android:textColor="@android:color/white"
         android:padding="16dp" />
 

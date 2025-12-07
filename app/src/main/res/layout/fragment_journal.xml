@@ -32,5 +32,7 @@
         android:layout_width="match_parent"
         android:layout_height="180dp"
         android:inputType="textMultiLine"
-        android:autoSizeTextType="none"/>
+        android:autoSizeTextType="none"
+        android:textColor="@color/text_light"
+        android:textColorHint="@color/hint_color"/>
 </LinearLayout>
