@@ -148,4 +148,75 @@ object UserStore {
         gender = null
         clearSession()
     }
+
+    // --------------------------------------------------------
+// STEP TRACKING WRITE FUNCTIONS
+// --------------------------------------------------------
+
+    fun saveTodaySteps(steps: Int) {
+        val user = loggedInUser ?: return
+        usersRef.child(user).child("steps").child("today").setValue(steps)
+    }
+
+    fun saveLastHourSteps(steps: Int) {
+        val user = loggedInUser ?: return
+        usersRef.child(user).child("steps").child("lastHour").setValue(steps)
+    }
+
+    fun saveGoal(goal: Int) {
+        val user = loggedInUser ?: return
+        usersRef.child(user).child("steps").child("goal").setValue(goal)
+    }
+
+    fun saveDowntime(startHour: Int, endHour: Int) {
+        val user = loggedInUser ?: return
+        val data = mapOf("startHour" to startHour, "endHour" to endHour)
+        usersRef.child(user).child("downtime").setValue(data)
+    }
+
+// --------------------------------------------------------
+// STEP TRACKING GETTERS (ASYNC)
+// --------------------------------------------------------
+
+    fun getTodaySteps(callback: (Int) -> Unit) {
+        val user = loggedInUser ?: return callback(0)
+        usersRef.child(user).child("steps").child("today")
+            .addListenerForSingleValueEvent(makeIntCallback(callback))
+    }
+
+    fun getLastHourSteps(callback: (Int) -> Unit) {
+        val user = loggedInUser ?: return callback(0)
+        usersRef.child(user).child("steps").child("lastHour")
+            .addListenerForSingleValueEvent(makeIntCallback(callback))
+    }
+
+    fun getGoal(callback: (Int) -> Unit) {
+        val user = loggedInUser ?: return callback(0)
+        usersRef.child(user).child("steps").child("goal")
+            .addListenerForSingleValueEvent(makeIntCallback(callback))
+    }
+
+    fun getDowntime(callback: (Int, Int) -> Unit) {
+        val user = loggedInUser ?: return callback(-1, -1)
+
+        usersRef.child(user).child("downtime")
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val start = snapshot.child("startHour").getValue(Int::class.java) ?: -1
+                    val end = snapshot.child("endHour").getValue(Int::class.java) ?: -1
+                    callback(start, end)
+                }
+
+                override fun onCancelled(error: DatabaseError) {}
+            })
+    }
+
+    private fun makeIntCallback(callback: (Int) -> Unit) =
+        object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                callback(snapshot.getValue(Int::class.java) ?: 0)
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+
 }

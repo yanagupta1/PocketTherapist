@@ -1,39 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <!-- Normal permissions -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- REQUIRED for step tracking on Android 14 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Optional but recommended -->
+    <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
 
     <application
         android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.PocketTherapist">
-        <activity
-            android:name=".SignInActivity"
-            android:exported="true">
+
+        <!-- REQUIRED: justification for special-use FGS -->
+        <property
+            android:name="android.app.PROPERTY_SPECIAL_USE_FGS_REASON"
+            android:value="STEP_COUNT_TRACKING"/>
+
+        <!-- Launcher -->
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- SIGNUP SCREEN -->
-        <activity
-            android:name=".SignupActivity"
-            android:exported="false" />
+        <activity android:name=".SignInActivity" android:exported="false" />
+        <activity android:name=".SignupActivity" android:exported="false" />
 
-        <!-- MAIN APP SCREEN (home + profile fragments) -->
-        <activity
-            android:name=".MainActivity"
+        <!-- Foreground Step Sensor Service -->
+        <service
+            android:name=".StepSensorService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+
+        <!-- Background Hourly Checker -->
+        <service
+            android:name=".StepCheckService"
             android:exported="false" />
     </application>
 

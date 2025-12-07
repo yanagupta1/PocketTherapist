@@ -75,13 +75,21 @@ class ProfileFragment : Fragment() {
         }
 
         // Logout button
+        // Logout button
         binding.btnLogout.setOnClickListener {
+
+            // Stop both background services
+            requireContext().stopService(Intent(requireContext(), StepSensorService::class.java))
+            requireContext().stopService(Intent(requireContext(), StepCheckService::class.java))
+
+            // Clear user session
             UserStore.signOut()
 
-            val intent = Intent(requireContext(), SignInActivity::class.java)
-            startActivity(intent)
+            // Navigate back to SignIn
+            startActivity(Intent(requireContext(), SignInActivity::class.java))
             requireActivity().finish()
         }
+
     }
 
     override fun onDestroyView() {

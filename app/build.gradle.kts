@@ -6,9 +6,8 @@ plugins {
 
 android {
     namespace = "com.example.pockettherapist"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
+
 
     defaultConfig {
         applicationId = "com.example.pockettherapist"
@@ -62,5 +61,7 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     implementation("com.google.android.gms:play-services-location:21.2.0")
+
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
 }

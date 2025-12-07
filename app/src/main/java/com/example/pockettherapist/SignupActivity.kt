@@ -16,11 +16,11 @@ class SignupActivity : AppCompatActivity() {
         binding = ActivitySignupBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Setup Gender Dropdown
-        binding.inputGender.setOnClickListener {
-            binding.inputGender.showDropDown()
-        }
+        UserStore.init(this)
 
+        // -------------------------------
+        // GENDER DROPDOWN SETUP (FIXED)
+        // -------------------------------
         val genderOptions = listOf("Male", "Female", "Other")
 
         val adapter = ArrayAdapter(
@@ -28,57 +28,60 @@ class SignupActivity : AppCompatActivity() {
             android.R.layout.simple_dropdown_item_1line,
             genderOptions
         )
+
         binding.inputGender.setAdapter(adapter)
 
+        // *** IMPORTANT FIX ***
         binding.inputGender.setOnClickListener {
             binding.inputGender.showDropDown()
         }
 
-        // Sign Up Button Logic
+        // -------------------------------
+        // SIGNUP BUTTON
+        // -------------------------------
         binding.btnSignup.setOnClickListener {
             val username = binding.etUsername.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
-            val ageText = binding.etAge.text.toString().trim()
+            val age = binding.etAge.text.toString().trim()
             val gender = binding.inputGender.text.toString().trim()
 
             if (username.isEmpty() || password.isEmpty()) {
-                Toast.makeText(this, "Username and Password required", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Username and password required", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-
-            val ageInt = ageText.toIntOrNull()
-            if (ageInt == null || ageInt < 0) {
-                Toast.makeText(this, "Invalid age", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (gender.isEmpty()) {
-                Toast.makeText(this, "Please select a gender", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            binding.btnSignup.isEnabled = false
 
             UserStore.signUp(
-                username = username,
-                password = password,
-                age = ageText,
-                gender = gender,
+                username,
+                password,
+                age,
+                gender,
                 onSuccess = {
-                    Toast.makeText(this, "Account created!", Toast.LENGTH_SHORT).show()
+                    startBackgroundServices()
+                    Toast.makeText(this, "Signup successful", Toast.LENGTH_SHORT).show()
                     startActivity(Intent(this, MainActivity::class.java))
                     finish()
                 },
-                onFailure = { error ->
-                    binding.btnSignup.isEnabled = true
-                    Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
+                onFailure = {
+                    Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
                 }
             )
         }
 
-        // Redirect to Sign In
+        // -------------------------------
+        // REDIRECT TO LOGIN
+        // -------------------------------
         binding.txtLoginRedirect.setOnClickListener {
             startActivity(Intent(this, SignInActivity::class.java))
         }
+    }
+
+    private fun startBackgroundServices() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            startForegroundService(Intent(this, StepSensorService::class.java))
+        } else {
+            startService(Intent(this, StepSensorService::class.java))
+        }
+
+        startService(Intent(this, StepCheckService::class.java))
     }
 }
