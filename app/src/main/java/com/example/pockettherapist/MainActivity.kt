@@ -23,6 +23,14 @@ class MainActivity : AppCompatActivity() {
                     replaceFragment(HomeFragment())
                     true
                 }
+                R.id.nav_activities -> {
+                    replaceFragment(ActivitiesFragment())
+                    true
+                }
+                R.id.nav_recommendations -> {
+                    replaceFragment(RecommendationsFragment())
+                    true
+                }
                 R.id.nav_profile -> {
                     replaceFragment(ProfileFragment())
                     true
