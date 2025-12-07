@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/gradient_bg"
-    android:paddingTop="60dp">
+    android:background="@drawable/gradient_bg_orange"
+    android:orientation="vertical">
 
+    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="24dp"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="16dp">
 
         <TextView
             android:id="@+id/txtTitle"
@@ -18,17 +21,35 @@
             android:text="@string/recommendations"
             android:textSize="28sp"
             android:textStyle="bold"
-            android:textColor="@android:color/white"
-            android:layout_marginBottom="8dp" />
+            android:textColor="@android:color/white" />
 
         <TextView
             android:id="@+id/txtSubtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
             android:text="@string/recommendations_desc"
-            android:textSize="16sp"
-            android:textColor="@color/text_light"
-            android:layout_marginBottom="24dp" />
+            android:textSize="14sp"
+            android:textColor="@color/text_light" />
 
     </LinearLayout>
-</ScrollView>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="100dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp">
+
+            <!-- Content goes here -->
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

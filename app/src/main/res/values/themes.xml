@@ -6,4 +6,22 @@
     </style>
 
     <style name="Theme.PocketTherapist" parent="Base.Theme.PocketTherapist" />
+
+    <!-- Circular Image Style for Profile Picture -->
+    <style name="CircularImageStyle">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <!-- Profile Input Field Style -->
+    <style name="ProfileInputStyle" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/dark_card</item>
+        <item name="boxStrokeColor">@color/accent_red</item>
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+        <item name="hintTextColor">@color/hint_color</item>
+        <item name="helperTextTextColor">@color/hint_color</item>
+    </style>
 </resources>

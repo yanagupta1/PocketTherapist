@@ -1,19 +1,67 @@
 package com.example.pockettherapist
 
+import android.Manifest
+import android.app.AlertDialog
+import android.app.DatePickerDialog
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
+import coil.load
+import coil.transform.CircleCropTransformation
 import com.example.pockettherapist.databinding.FragmentProfileBinding
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ProfileFragment : Fragment() {
 
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
+
+    // Edit mode state
+    private var isEditMode = false
+
+    // Cached original values for cancel operation
+    private var originalProfile: UserProfile? = null
+
+    // Temporary URI for camera capture
+    private var tempImageUri: Uri? = null
+
+    // Activity Result Launchers
+    private val pickMediaLauncher = registerForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { handleSelectedImage(it) }
+    }
+
+    private val takePictureLauncher = registerForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempImageUri?.let { handleSelectedImage(it) }
+        }
+    }
+
+    private val cameraPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            launchCamera()
+        } else {
+            Toast.makeText(requireContext(), "Camera permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -26,62 +74,337 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Set up gender dropdown
-        val adapter = ArrayAdapter.createFromResource(
+        setupGenderDropdown()
+        setupClickListeners()
+        loadProfileData()
+    }
+
+    private fun setupGenderDropdown() {
+        val genderOptions = resources.getStringArray(R.array.gender_options)
+        val adapter = ArrayAdapter(
             requireContext(),
-            R.array.gender_options,
-            android.R.layout.simple_spinner_item
+            android.R.layout.simple_dropdown_item_1line,
+            genderOptions
         )
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerGender.adapter = adapter
+        binding.dropdownGender.setAdapter(adapter)
+    }
 
-        // Load saved data
-        binding.editUsername.setText(UserStore.loggedInUser ?: "")
-        binding.editAge.setText(UserStore.age ?: "")
-
-        // Set saved gender in spinner
-        val savedGender = UserStore.gender
-        if (savedGender != null) {
-            val index = adapter.getPosition(savedGender)
-            if (index >= 0) binding.spinnerGender.setSelection(index)
+    private fun setupClickListeners() {
+        // Edit toggle button
+        binding.btnEditToggle.setOnClickListener {
+            if (isEditMode) {
+                // Already in edit mode - this becomes cancel
+                cancelEdit()
+            } else {
+                enterEditMode()
+            }
         }
 
-        // Save profile
-        binding.btnSaveProfile.setOnClickListener {
-            val ageText = binding.editAge.text.toString()
-
-            val ageInt = ageText.toIntOrNull()
-            if (ageInt == null || ageInt < 0) {
-                Toast.makeText(requireContext(), "Invalid age", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+        // Profile picture click (only works in edit mode)
+        binding.cameraOverlay.setOnClickListener {
+            if (isEditMode) {
+                showImagePickerDialog()
             }
+        }
 
-            val gender = binding.spinnerGender.selectedItem.toString()
+        // Birthdate picker
+        binding.editBirthdate.setOnClickListener {
+            if (isEditMode) {
+                showDatePicker()
+            }
+        }
 
-            binding.btnSaveProfile.isEnabled = false
+        // Save button
+        binding.btnSaveProfile.setOnClickListener {
+            saveProfile()
+        }
 
-            UserStore.updateProfile(
-                age = ageText,
-                gender = gender,
-                onSuccess = {
-                    binding.btnSaveProfile.isEnabled = true
-                    Toast.makeText(requireContext(), "Profile saved successfully", Toast.LENGTH_SHORT).show()
-                },
-                onFailure = { error ->
-                    binding.btnSaveProfile.isEnabled = true
-                    Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
-                }
-            )
+        // Cancel button
+        binding.btnCancelEdit.setOnClickListener {
+            cancelEdit()
         }
 
         // Logout button
         binding.btnLogout.setOnClickListener {
             UserStore.signOut()
-
             val intent = Intent(requireContext(), SignInActivity::class.java)
             startActivity(intent)
             requireActivity().finish()
         }
+    }
+
+    private fun loadProfileData() {
+        // Show cached data immediately (offline support)
+        displayCachedData()
+
+        // Then fetch fresh data from Firebase
+        UserStore.loadProfile(
+            onSuccess = { profile ->
+                originalProfile = profile
+                displayProfile(profile)
+            },
+            onFailure = { _ ->
+                // Already showing cached data, just log the error
+                Toast.makeText(requireContext(), "Could not refresh profile", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    private fun displayCachedData() {
+        binding.txtUsername.text = "@${UserStore.loggedInUser ?: ""}"
+        binding.txtDisplayName.text = UserStore.displayName?.ifEmpty { UserStore.loggedInUser } ?: UserStore.loggedInUser ?: ""
+        binding.editDisplayName.setText(UserStore.displayName ?: "")
+        binding.editAge.setText(UserStore.age ?: "")
+        binding.dropdownGender.setText(UserStore.gender ?: "", false)
+        binding.editBirthdate.setText(UserStore.birthdate ?: "")
+        binding.editLocation.setText(UserStore.location ?: "")
+        binding.editBio.setText(UserStore.bio ?: "")
+        binding.editInterests.setText(UserStore.interests ?: "")
+
+        // Load profile picture with Coil
+        UserStore.profilePictureUrl?.let { url ->
+            if (url.isNotEmpty()) {
+                binding.imgProfile.load(url) {
+                    crossfade(true)
+                    placeholder(R.drawable.ic_profile_placeholder)
+                    error(R.drawable.ic_profile_placeholder)
+                    transformations(CircleCropTransformation())
+                }
+            }
+        }
+    }
+
+    private fun displayProfile(profile: UserProfile) {
+        binding.txtUsername.text = "@${profile.username}"
+        binding.txtDisplayName.text = profile.displayName.ifEmpty { profile.username }
+        binding.editDisplayName.setText(profile.displayName)
+        binding.editAge.setText(profile.age)
+        binding.dropdownGender.setText(profile.gender, false)
+        binding.editBirthdate.setText(profile.birthdate)
+        binding.editLocation.setText(profile.location)
+        binding.editBio.setText(profile.bio)
+        binding.editInterests.setText(profile.interests)
+
+        // Load profile picture with Coil
+        if (profile.profilePictureUrl.isNotEmpty()) {
+            binding.imgProfile.load(profile.profilePictureUrl) {
+                crossfade(true)
+                placeholder(R.drawable.ic_profile_placeholder)
+                error(R.drawable.ic_profile_placeholder)
+                transformations(CircleCropTransformation())
+            }
+        }
+    }
+
+    private fun enterEditMode() {
+        isEditMode = true
+
+        // Change edit button to close icon
+        binding.btnEditToggle.setImageResource(R.drawable.ic_close)
+
+        // Show camera overlay on profile picture
+        binding.cameraOverlay.visibility = View.VISIBLE
+
+        // Show display name input
+        binding.tilDisplayName.visibility = View.VISIBLE
+
+        // Enable all input fields
+        setFieldsEnabled(true)
+
+        // Show save and cancel buttons
+        binding.btnSaveProfile.visibility = View.VISIBLE
+        binding.btnCancelEdit.visibility = View.VISIBLE
+    }
+
+    private fun exitEditMode() {
+        isEditMode = false
+
+        // Change close icon back to edit
+        binding.btnEditToggle.setImageResource(R.drawable.ic_edit)
+
+        // Hide camera overlay
+        binding.cameraOverlay.visibility = View.GONE
+
+        // Hide display name input (show text view instead)
+        binding.tilDisplayName.visibility = View.GONE
+
+        // Disable all input fields
+        setFieldsEnabled(false)
+
+        // Hide save and cancel buttons
+        binding.btnSaveProfile.visibility = View.GONE
+        binding.btnCancelEdit.visibility = View.GONE
+    }
+
+    private fun setFieldsEnabled(enabled: Boolean) {
+        binding.editDisplayName.isEnabled = enabled
+        binding.editAge.isEnabled = enabled
+        binding.dropdownGender.isEnabled = enabled
+        binding.editBirthdate.isEnabled = enabled
+        binding.editLocation.isEnabled = enabled
+        binding.editBio.isEnabled = enabled
+        binding.editInterests.isEnabled = enabled
+    }
+
+    private fun cancelEdit() {
+        // Restore original values
+        originalProfile?.let { displayProfile(it) } ?: displayCachedData()
+        exitEditMode()
+    }
+
+    private fun saveProfile() {
+        val displayName = binding.editDisplayName.text.toString().trim()
+        val age = binding.editAge.text.toString().trim()
+        val gender = binding.dropdownGender.text.toString().trim()
+        val birthdate = binding.editBirthdate.text.toString().trim()
+        val location = binding.editLocation.text.toString().trim()
+        val bio = binding.editBio.text.toString().trim()
+        val interests = binding.editInterests.text.toString().trim()
+
+        // Validation
+        val ageInt = age.toIntOrNull()
+        if (age.isNotEmpty() && (ageInt == null || ageInt < 0 || ageInt > 150)) {
+            Toast.makeText(requireContext(), "Invalid age", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        binding.btnSaveProfile.isEnabled = false
+
+        UserStore.updateFullProfile(
+            displayName = displayName,
+            bio = bio,
+            age = age,
+            gender = gender,
+            birthdate = birthdate,
+            location = location,
+            interests = interests,
+            onSuccess = {
+                binding.btnSaveProfile.isEnabled = true
+                Toast.makeText(requireContext(), "Profile saved successfully", Toast.LENGTH_SHORT).show()
+
+                // Update display name text view
+                binding.txtDisplayName.text = displayName.ifEmpty { UserStore.loggedInUser ?: "" }
+
+                // Update cached original profile
+                originalProfile = UserProfile(
+                    username = UserStore.loggedInUser ?: "",
+                    displayName = displayName,
+                    bio = bio,
+                    age = age,
+                    gender = gender,
+                    birthdate = birthdate,
+                    location = location,
+                    interests = interests,
+                    profilePictureUrl = originalProfile?.profilePictureUrl ?: ""
+                )
+
+                exitEditMode()
+            },
+            onFailure = { error ->
+                binding.btnSaveProfile.isEnabled = true
+                Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    private fun showImagePickerDialog() {
+        val options = arrayOf("Take Photo", "Choose from Gallery")
+        AlertDialog.Builder(requireContext())
+            .setTitle("Profile Picture")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> checkCameraPermissionAndLaunch()
+                    1 -> launchGalleryPicker()
+                }
+            }
+            .show()
+    }
+
+    private fun checkCameraPermissionAndLaunch() {
+        when {
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                launchCamera()
+            }
+            else -> {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+    }
+
+    private fun launchCamera() {
+        val photoFile = File.createTempFile(
+            "profile_",
+            ".jpg",
+            requireContext().cacheDir
+        )
+        tempImageUri = FileProvider.getUriForFile(
+            requireContext(),
+            "${requireContext().packageName}.fileprovider",
+            photoFile
+        )
+        takePictureLauncher.launch(tempImageUri)
+    }
+
+    private fun launchGalleryPicker() {
+        pickMediaLauncher.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+        )
+    }
+
+    private fun handleSelectedImage(uri: Uri) {
+        // Show loading state
+        binding.imgProfile.alpha = 0.5f
+
+        // Upload to Firebase Storage
+        UserStore.uploadProfilePicture(
+            imageUri = uri,
+            onSuccess = { downloadUrl ->
+                binding.imgProfile.alpha = 1.0f
+                // Update image with new URL
+                binding.imgProfile.load(downloadUrl) {
+                    crossfade(true)
+                    transformations(CircleCropTransformation())
+                }
+                Toast.makeText(requireContext(), "Profile picture updated", Toast.LENGTH_SHORT).show()
+            },
+            onFailure = { error ->
+                binding.imgProfile.alpha = 1.0f
+                Toast.makeText(requireContext(), "Failed to upload: $error", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    private fun showDatePicker() {
+        val calendar = Calendar.getInstance()
+
+        // Try to parse existing date
+        binding.editBirthdate.text?.toString()?.let { dateStr ->
+            try {
+                val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                format.parse(dateStr)?.let { date ->
+                    calendar.time = date
+                }
+            } catch (_: Exception) {
+                // Use current date if parsing fails
+            }
+        }
+
+        DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                val selectedDate = String.format("%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                binding.editBirthdate.setText(selectedDate)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).apply {
+            // Prevent future dates
+            datePicker.maxDate = System.currentTimeMillis()
+        }.show()
     }
 
     override fun onDestroyView() {

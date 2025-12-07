@@ -2,10 +2,12 @@ package com.example.pockettherapist
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.storage.FirebaseStorage
 
 object UserStore {
     private val database = FirebaseDatabase.getInstance()
@@ -15,12 +17,24 @@ object UserStore {
     private const val KEY_USERNAME = "logged_in_username"
     private const val KEY_AGE = "user_age"
     private const val KEY_GENDER = "user_gender"
+    private const val KEY_DISPLAY_NAME = "display_name"
+    private const val KEY_BIO = "user_bio"
+    private const val KEY_BIRTHDATE = "user_birthdate"
+    private const val KEY_LOCATION = "user_location"
+    private const val KEY_INTERESTS = "user_interests"
+    private const val KEY_PROFILE_PICTURE_URL = "profile_picture_url"
 
     private var prefs: SharedPreferences? = null
 
     var loggedInUser: String? = null
     var age: String? = null
     var gender: String? = null
+    var displayName: String? = null
+    var bio: String? = null
+    var birthdate: String? = null
+    var location: String? = null
+    var interests: String? = null
+    var profilePictureUrl: String? = null
 
     fun init(context: Context) {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -28,6 +42,12 @@ object UserStore {
         loggedInUser = prefs?.getString(KEY_USERNAME, null)
         age = prefs?.getString(KEY_AGE, null)
         gender = prefs?.getString(KEY_GENDER, null)
+        displayName = prefs?.getString(KEY_DISPLAY_NAME, null)
+        bio = prefs?.getString(KEY_BIO, null)
+        birthdate = prefs?.getString(KEY_BIRTHDATE, null)
+        location = prefs?.getString(KEY_LOCATION, null)
+        interests = prefs?.getString(KEY_INTERESTS, null)
+        profilePictureUrl = prefs?.getString(KEY_PROFILE_PICTURE_URL, null)
     }
 
     fun isLoggedIn(): Boolean = loggedInUser != null
@@ -37,6 +57,12 @@ object UserStore {
             putString(KEY_USERNAME, loggedInUser)
             putString(KEY_AGE, age)
             putString(KEY_GENDER, gender)
+            putString(KEY_DISPLAY_NAME, displayName)
+            putString(KEY_BIO, bio)
+            putString(KEY_BIRTHDATE, birthdate)
+            putString(KEY_LOCATION, location)
+            putString(KEY_INTERESTS, interests)
+            putString(KEY_PROFILE_PICTURE_URL, profilePictureUrl)
             apply()
         }
     }
@@ -101,6 +127,12 @@ object UserStore {
                     loggedInUser = username
                     age = snapshot.child("age").getValue(String::class.java)
                     gender = snapshot.child("gender").getValue(String::class.java)
+                    displayName = snapshot.child("displayName").getValue(String::class.java)
+                    bio = snapshot.child("bio").getValue(String::class.java)
+                    birthdate = snapshot.child("birthdate").getValue(String::class.java)
+                    location = snapshot.child("location").getValue(String::class.java)
+                    interests = snapshot.child("interests").getValue(String::class.java)
+                    profilePictureUrl = snapshot.child("profilePictureUrl").getValue(String::class.java)
                     saveSession()
                     onSuccess()
                 } else {
@@ -146,6 +178,221 @@ object UserStore {
         loggedInUser = null
         age = null
         gender = null
+        displayName = null
+        bio = null
+        birthdate = null
+        location = null
+        interests = null
+        profilePictureUrl = null
         clearSession()
+    }
+
+    // Full Profile Operations
+
+    fun updateFullProfile(
+        displayName: String,
+        bio: String,
+        age: String,
+        gender: String,
+        birthdate: String,
+        location: String,
+        interests: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val username = loggedInUser ?: run {
+            onFailure("No user logged in")
+            return
+        }
+
+        val updates = mapOf(
+            "displayName" to displayName,
+            "bio" to bio,
+            "age" to age,
+            "gender" to gender,
+            "birthdate" to birthdate,
+            "location" to location,
+            "interests" to interests
+        )
+
+        usersRef.child(username).updateChildren(updates)
+            .addOnSuccessListener {
+                this@UserStore.displayName = displayName
+                this@UserStore.bio = bio
+                this@UserStore.age = age
+                this@UserStore.gender = gender
+                this@UserStore.birthdate = birthdate
+                this@UserStore.location = location
+                this@UserStore.interests = interests
+                saveSession()
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                onFailure(e.message ?: "Update failed")
+            }
+    }
+
+    fun uploadProfilePicture(
+        imageUri: Uri,
+        onSuccess: (String) -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val username = loggedInUser ?: run {
+            onFailure("No user logged in")
+            return
+        }
+
+        val storageRef = FirebaseStorage.getInstance()
+            .getReference("profile_pictures/$username/profile.jpg")
+
+        storageRef.putFile(imageUri)
+            .addOnSuccessListener {
+                storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                    val url = downloadUrl.toString()
+                    // Update database with URL
+                    usersRef.child(username).child("profilePictureUrl").setValue(url)
+                        .addOnSuccessListener {
+                            this@UserStore.profilePictureUrl = url
+                            saveSession()
+                            onSuccess(url)
+                        }
+                        .addOnFailureListener { e ->
+                            onFailure(e.message ?: "Failed to save URL")
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+                onFailure(e.message ?: "Upload failed")
+            }
+    }
+
+    fun loadProfile(
+        onSuccess: (UserProfile) -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val username = loggedInUser ?: run {
+            onFailure("No user logged in")
+            return
+        }
+
+        usersRef.child(username).addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val profile = UserProfile(
+                    username = username,
+                    displayName = snapshot.child("displayName").getValue(String::class.java) ?: "",
+                    bio = snapshot.child("bio").getValue(String::class.java) ?: "",
+                    age = snapshot.child("age").getValue(String::class.java) ?: "",
+                    gender = snapshot.child("gender").getValue(String::class.java) ?: "",
+                    birthdate = snapshot.child("birthdate").getValue(String::class.java) ?: "",
+                    location = snapshot.child("location").getValue(String::class.java) ?: "",
+                    interests = snapshot.child("interests").getValue(String::class.java) ?: "",
+                    profilePictureUrl = snapshot.child("profilePictureUrl").getValue(String::class.java) ?: ""
+                )
+                // Update local cache
+                displayName = profile.displayName
+                bio = profile.bio
+                age = profile.age
+                gender = profile.gender
+                birthdate = profile.birthdate
+                location = profile.location
+                interests = profile.interests
+                profilePictureUrl = profile.profilePictureUrl
+                saveSession()
+                onSuccess(profile)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                onFailure(error.message)
+            }
+        })
+    }
+
+    // Journal Entry Operations
+
+    fun saveJournalEntry(
+        text: String,
+        onSuccess: (JournalEntry) -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val username = loggedInUser ?: run {
+            onFailure("No user logged in")
+            return
+        }
+
+        val journalsRef = usersRef.child(username).child("journals")
+        val newEntryRef = journalsRef.push()
+        val entryId = newEntryRef.key ?: run {
+            onFailure("Failed to generate entry ID")
+            return
+        }
+
+        val timestamp = System.currentTimeMillis()
+        val entry = JournalEntry(
+            id = entryId,
+            text = text,
+            timestamp = timestamp
+        )
+
+        val entryData = mapOf(
+            "text" to text,
+            "timestamp" to timestamp
+        )
+
+        newEntryRef.setValue(entryData)
+            .addOnSuccessListener {
+                onSuccess(entry)
+            }
+            .addOnFailureListener { e ->
+                onFailure(e.message ?: "Failed to save journal entry")
+            }
+    }
+
+    fun loadJournalEntries(
+        onSuccess: (List<JournalEntry>) -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val username = loggedInUser ?: run {
+            onFailure("No user logged in")
+            return
+        }
+
+        val journalsRef = usersRef.child(username).child("journals")
+        journalsRef.orderByChild("timestamp").addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val entries = mutableListOf<JournalEntry>()
+                for (childSnapshot in snapshot.children) {
+                    val id = childSnapshot.key ?: continue
+                    val text = childSnapshot.child("text").getValue(String::class.java) ?: ""
+                    val timestamp = childSnapshot.child("timestamp").getValue(Long::class.java) ?: 0L
+                    entries.add(JournalEntry(id, text, timestamp))
+                }
+                // Sort by timestamp descending (newest first)
+                entries.sortByDescending { it.timestamp }
+                onSuccess(entries)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                onFailure(error.message)
+            }
+        })
+    }
+
+    fun deleteJournalEntry(
+        entryId: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val username = loggedInUser ?: run {
+            onFailure("No user logged in")
+            return
+        }
+
+        usersRef.child(username).child("journals").child(entryId).removeValue()
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                onFailure(e.message ?: "Failed to delete journal entry")
+            }
     }
 }

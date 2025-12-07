@@ -8,7 +8,14 @@
     <color name="text_dark">#222222</color>
     <color name="text_light">#E0E0E0</color>
     <color name="accent">#5DADE2</color>
+    <color name="accent_light">#A8D8F0</color>
     <color name="light_gray">#DADADA</color>
     <color name="dark_gray">#3D3D3D</color>
     <color name="hint_color">#AAAAAA</color>
+
+    <!-- Fragment accent colors (pastel) -->
+    <color name="accent_blue">#5DADE2</color>
+    <color name="accent_purple">#BB8FCE</color>
+    <color name="accent_orange">#F5B041</color>
+    <color name="accent_red">#F1948A</color>
 </resources>

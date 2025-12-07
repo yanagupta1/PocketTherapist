@@ -28,6 +28,15 @@
     <string name="hint_age">Age</string>
     <string name="hint_gender">Gender</string>
     <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="display_name">Display Name</string>
+    <string name="bio">Bio</string>
+    <string name="birthdate">Birthdate</string>
+    <string name="location">Location</string>
+    <string name="interests">Interests</string>
+    <string name="personal_info">Personal Info</string>
+    <string name="about_me">About Me</string>
+    <string name="edit_profile">Edit Profile</string>
 
     <string-array name="gender_options">
         <item>Male</item>
