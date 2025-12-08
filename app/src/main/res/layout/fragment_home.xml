@@ -15,7 +15,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="24dp"
+            android:paddingLeft="24dp"
+            android:paddingRight="24dp"
             android:paddingTop="48dp"
             android:paddingBottom="16dp">
 
@@ -34,6 +35,119 @@
 
         </LinearLayout>
 
+        <!-- ⭐ Welcome Blurb Section ⭐ -->
+        <LinearLayout
+            android:id="@+id/journalWelcomeContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingLeft="24dp"
+            android:paddingRight="24dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="16dp">
+
+            <!-- Greeting -->
+            <TextView
+                android:id="@+id/journalWelcomeText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_light"
+                android:textSize="16sp"
+                android:lineSpacingExtra="4dp"
+                android:text="Welcome! How are we feeling today?" />
+
+            <!-- + icon row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    app:tint="@color/text_light"
+                    android:src="@drawable/ic_plus"
+                    android:layout_marginEnd="10dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Record a new journal entry"
+                    android:textColor="@color/text_light"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Activities icon row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    app:tint="@color/text_light"
+                    android:src="@drawable/ic_activities"
+                    android:layout_marginEnd="10dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="View your health goals and nearby activities"
+                    android:textColor="@color/text_light"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Recommendations icon row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    app:tint="@color/text_light"
+                    android:src="@drawable/ic_recommendations"
+                    android:layout_marginEnd="10dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="View personalized recommendations"
+                    android:textColor="@color/text_light"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Profile row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    app:tint="@color/text_light"
+                    android:src="@drawable/ic_profile"
+                    android:layout_marginEnd="10dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Edit your profile"
+                    android:textColor="@color/text_light"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+        </LinearLayout>
+        <!-- ⭐ End Welcome Section ⭐ -->
+
+        <!-- Journal entries list -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/journalRecycler"
             android:layout_width="match_parent"
@@ -51,14 +165,14 @@
         android:background="#99000000"
         android:visibility="gone" />
 
-    <!-- New entry card - bottom aligned, 70% of screen height -->
+    <!-- New entry overlay -->
     <ScrollView
         android:id="@+id/entryOverlay"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_gravity="bottom"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="0dp"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
         android:background="@drawable/rounded_card"
         android:fillViewport="true"
         android:visibility="gone">
@@ -76,10 +190,9 @@
             android:textColor="@color/text_light"
             android:textColorHint="@color/hint_color"
             android:textSize="16sp" />
-
     </ScrollView>
 
-    <!-- FAB container positioned above nav bar -->
+    <!-- Floating Action Button -->
     <FrameLayout
         android:id="@+id/fabContainer"
         android:layout_width="64dp"
@@ -98,7 +211,6 @@
             android:layout_gravity="center"
             android:src="@drawable/ic_plus"
             app:tint="@android:color/white" />
-
     </FrameLayout>
 
 </FrameLayout>
