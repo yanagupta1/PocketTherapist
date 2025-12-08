@@ -147,7 +147,7 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- Activity Level Card -->
+            <!-- Daily Activity Goal Card -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/cardActivityLevel"
                 android:layout_width="match_parent"
@@ -164,18 +164,37 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Header -->
-                    <TextView
-                        android:id="@+id/txtActivityLabel"
-                        android:layout_width="wrap_content"
+                    <!-- Header with edit button -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="ACTIVITY LEVEL"
-                        android:textColor="@color/accent_purple"
-                        android:fontFamily="@font/poppins_semibold"
-                        android:textSize="12sp"
-                        android:letterSpacing="0.05" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
 
-                    <!-- Activity percentage and state row -->
+                        <TextView
+                            android:id="@+id/txtActivityLabel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="DAILY ACTIVITY GOAL"
+                            android:textColor="@color/accent_purple"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:textSize="12sp"
+                            android:letterSpacing="0.05" />
+
+                        <ImageView
+                            android:id="@+id/btnEditActivityGoal"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_edit"
+                            android:contentDescription="Edit activity goal"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                    </LinearLayout>
+
+                    <!-- Activity percentage display -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -201,69 +220,19 @@
                             android:fontFamily="@font/poppins_regular"
                             android:textSize="18sp" />
 
-                        <View
-                            android:layout_width="0dp"
-                            android:layout_height="0dp"
-                            android:layout_weight="1" />
-
-                        <!-- Activity state with dots -->
-                        <LinearLayout
+                        <TextView
+                            android:id="@+id/txtActivityGoalInfo"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:gravity="end">
-
-                            <TextView
-                                android:id="@+id/txtActivityState"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Resting"
-                                android:textColor="@color/text_light"
-                                android:fontFamily="@font/poppins_medium"
-                                android:textSize="16sp" />
-
-                            <!-- Activity indicator dots -->
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical">
-
-                                <View
-                                    android:id="@+id/dotSedentary"
-                                    android:layout_width="10dp"
-                                    android:layout_height="10dp"
-                                    android:layout_marginEnd="4dp"
-                                    android:background="@drawable/activity_dot_active" />
-
-                                <View
-                                    android:id="@+id/dotLight"
-                                    android:layout_width="10dp"
-                                    android:layout_height="10dp"
-                                    android:layout_marginEnd="4dp"
-                                    android:background="@drawable/activity_dot_inactive" />
-
-                                <View
-                                    android:id="@+id/dotModerate"
-                                    android:layout_width="10dp"
-                                    android:layout_height="10dp"
-                                    android:layout_marginEnd="4dp"
-                                    android:background="@drawable/activity_dot_inactive" />
-
-                                <View
-                                    android:id="@+id/dotVigorous"
-                                    android:layout_width="10dp"
-                                    android:layout_height="10dp"
-                                    android:background="@drawable/activity_dot_inactive" />
-
-                            </LinearLayout>
-
-                        </LinearLayout>
+                            android:layout_marginStart="12dp"
+                            android:text="of daily goal"
+                            android:textColor="@color/hint_color"
+                            android:fontFamily="@font/poppins_regular"
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
-                    <!-- Activity level progress bar -->
+                    <!-- Activity progress bar -->
                     <ProgressBar
                         android:id="@+id/progressActivity"
                         style="@style/Widget.AppCompat.ProgressBar.Horizontal"
@@ -274,6 +243,17 @@
                         android:progress="0"
                         android:progressTint="@color/accent_purple"
                         android:progressBackgroundTint="@color/dark_gray" />
+
+                    <!-- Activity minutes info -->
+                    <TextView
+                        android:id="@+id/txtActivityMinutes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="0 / 30 active minutes"
+                        android:textColor="@color/hint_color"
+                        android:fontFamily="@font/poppins_regular"
+                        android:textSize="12sp" />
 
                 </LinearLayout>
 

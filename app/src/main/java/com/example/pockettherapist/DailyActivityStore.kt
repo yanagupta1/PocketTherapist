@@ -32,6 +32,7 @@ object DailyActivityStore {
         var peakActivityLevel: Float = 0f,
         var averageActivityLevel: Float = 0f,
         var activitySamples: Int = 0,
+        var activityPoints: Float = 0f,   // Weighted activity score
         var lastUpdated: Long = System.currentTimeMillis()
     ) {
         fun getTotalActiveMinutes(): Int = lightMinutes + moderateMinutes + vigorousMinutes
@@ -43,6 +44,27 @@ object DailyActivityStore {
                 lightMinutes > 0 -> "Light"
                 else -> "Resting"
             }
+        }
+
+        /**
+         * Calculate activity score based on intensity-weighted minutes
+         * Light = 0.5 points/min, Moderate = 1.0 points/min, Vigorous = 2.0 points/min
+         */
+        fun calculateActivityScore(): Float {
+            return (lightMinutes * 0.5f) + (moderateMinutes * 1.0f) + (vigorousMinutes * 2.0f) + activityPoints
+        }
+    }
+
+    /**
+     * Get recommended daily activity goal based on age
+     * Based on WHO guidelines: 150-300 min/week moderate activity
+     * Returns goal in "activity points" (equivalent moderate minutes)
+     */
+    fun getRecommendedActivityGoal(age: Int): Int {
+        return when {
+            age < 18 -> 60      // Children/teens: 60 min/day moderate-vigorous
+            age < 65 -> 30      // Adults: ~30 min/day moderate (150 min/week)
+            else -> 25          // Older adults: slightly lower but still active
         }
     }
 
@@ -128,13 +150,26 @@ object DailyActivityStore {
         val caloriesBurned = caloriesPerMinute * (durationSeconds / 60f)
         data.totalCalories += caloriesBurned
 
-        // Track time in each activity state (convert seconds to minutes)
-        val minutes = (durationSeconds / 60f).toInt().coerceAtLeast(0)
-        when (activityState) {
-            ActivityTracker.ActivityState.RESTING -> data.restingMinutes += minutes
-            ActivityTracker.ActivityState.LIGHT -> data.lightMinutes += minutes
-            ActivityTracker.ActivityState.MODERATE -> data.moderateMinutes += minutes
-            ActivityTracker.ActivityState.VIGOROUS -> data.vigorousMinutes += minutes
+        // Calculate activity points for this sample based on intensity
+        // activityLevel 0-1 maps to: 0-0.1 = resting (0), 0.1-0.3 = light (0.5), 0.3-0.6 = moderate (1), 0.6+ = vigorous (2)
+        val pointsPerMinute = when {
+            activityLevel < 0.1f -> 0f
+            activityLevel < 0.3f -> 0.5f
+            activityLevel < 0.6f -> 1.0f
+            else -> 2.0f
+        }
+        val minutesFraction = durationSeconds / 60f
+        data.activityPoints += pointsPerMinute * minutesFraction
+
+        // Track time in each activity state (only count full minutes)
+        val fullMinutes = (durationSeconds / 60f).toInt()
+        if (fullMinutes > 0) {
+            when (activityState) {
+                ActivityTracker.ActivityState.RESTING -> data.restingMinutes += fullMinutes
+                ActivityTracker.ActivityState.LIGHT -> data.lightMinutes += fullMinutes
+                ActivityTracker.ActivityState.MODERATE -> data.moderateMinutes += fullMinutes
+                ActivityTracker.ActivityState.VIGOROUS -> data.vigorousMinutes += fullMinutes
+            }
         }
 
         // Update peak activity level

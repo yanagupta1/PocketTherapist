@@ -291,18 +291,21 @@ class ActivityTrackingService : Service(), SensorEventListener {
             else -> ActivityTracker.ActivityState.VIGOROUS
         }
 
-        // Calculate calories
-        val met = activityState.metValue * (1 + activityLevel)
-        caloriesPerMinute = (met * userWeightKg * 3.5f) / 200f
+        // Only record calories and activity when there's actual movement (not resting)
+        if (activityLevel > 0.1f) {
+            // Calculate calories only for active movement
+            val met = activityState.metValue * (1 + activityLevel)
+            caloriesPerMinute = (met * userWeightKg * 3.5f) / 200f
 
-        // Record to daily store
-        DailyActivityStore.recordActivitySample(
-            context = this,
-            activityLevel = activityLevel,
-            activityState = activityState,
-            caloriesPerMinute = caloriesPerMinute,
-            durationSeconds = elapsedSeconds
-        )
+            // Record to daily store
+            DailyActivityStore.recordActivitySample(
+                context = this,
+                activityLevel = activityLevel,
+                activityState = activityState,
+                caloriesPerMinute = caloriesPerMinute,
+                durationSeconds = elapsedSeconds
+            )
+        }
 
         lastSampleTime = currentTime
 
@@ -338,10 +341,11 @@ class ActivityTrackingService : Service(), SensorEventListener {
         )
 
         val todayData = DailyActivityStore.getTodayData(this)
+        val activeMinutes = todayData.getTotalActiveMinutes()
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Tracking Activity")
-            .setContentText("Steps: ${todayData.totalSteps} | Calories: ${todayData.totalCalories.toInt()}")
+            .setContentText("Steps: ${todayData.totalSteps} | Active: ${activeMinutes}min | Cal: ${todayData.totalCalories.toInt()}")
             .setSmallIcon(R.drawable.ic_directions_walk)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

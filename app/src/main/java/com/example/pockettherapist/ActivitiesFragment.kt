@@ -47,6 +47,7 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
     private var activityTracker: ActivityTracker? = null
     private var lastCalorieUpdateTime = 0L
     private var calorieGoal = DEFAULT_CALORIE_GOAL
+    private var activityGoal = DEFAULT_ACTIVITY_GOAL
 
     // Cached data
     private var cachedAmenities: List<RecommendationEngine.ResourceDetail>? = null
@@ -81,7 +82,9 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
 
         private const val KEY_CALORIE_GOAL = "calorie_goal"
         private const val DEFAULT_CALORIE_GOAL = 500
-        private const val AVG_CALORIES_PER_MINUTE = 1.2f // Average resting + light activity
+
+        private const val KEY_ACTIVITY_GOAL = "activity_goal"
+        private const val DEFAULT_ACTIVITY_GOAL = 30 // 30 minutes of moderate activity
 
         private const val CACHE_PREFS_NAME = "activities_cache"
         private const val KEY_CACHED_AMENITIES = "cached_amenities"
@@ -155,6 +158,12 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         // Setup calorie goal edit button
         setupEditCalorieGoalButton()
 
+        // Load activity goal
+        loadActivityGoal()
+
+        // Setup activity goal edit button
+        setupEditActivityGoalButton()
+
         // Auto-start background tracking
         autoStartBackgroundTracking()
 
@@ -219,6 +228,55 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
             .show()
     }
 
+    // -------------------------------------------------
+    // ACTIVITY GOAL (Daily cumulative goal)
+    // -------------------------------------------------
+
+    private fun loadActivityGoal() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        activityGoal = prefs.getInt(KEY_ACTIVITY_GOAL, DEFAULT_ACTIVITY_GOAL)
+    }
+
+    private fun saveActivityGoal(goal: Int) {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_ACTIVITY_GOAL, goal).apply()
+    }
+
+    private fun setupEditActivityGoalButton() {
+        binding.btnEditActivityGoal.setOnClickListener {
+            showEditActivityGoalDialog()
+        }
+    }
+
+    private fun showEditActivityGoalDialog() {
+        val editText = EditText(requireContext()).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            hint = "Enter activity goal (minutes)"
+            setText(activityGoal.toString())
+            selectAll()
+        }
+
+        val padding = (24 * resources.displayMetrics.density).toInt()
+        editText.setPadding(padding, padding, padding, padding)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Set Daily Activity Goal")
+            .setMessage("Recommended: ${DailyActivityStore.getRecommendedActivityGoal(30)} minutes of moderate activity per day")
+            .setView(editText)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val newGoal = editText.text.toString().toIntOrNull()
+                if (newGoal != null && newGoal > 0) {
+                    activityGoal = newGoal
+                    saveActivityGoal(newGoal)
+                    loadDailyData() // Refresh to update progress
+                } else {
+                    Toast.makeText(requireContext(), "Please enter a valid number", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun checkNotificationPermissionAndStart() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             when {
@@ -244,13 +302,8 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
     private fun loadDailyData() {
         val dailyData = DailyActivityStore.getTodayData(requireContext())
 
-        // Calculate calories - use stored or estimate based on time
-        var displayCalories = dailyData.totalCalories
-
-        // If no calories recorded yet, estimate based on time of day
-        if (displayCalories < 1f) {
-            displayCalories = estimateCaloriesFromTime()
-        }
+        // Only show actively tracked calories
+        val displayCalories = dailyData.totalCalories
 
         // Update calorie display
         binding.txtCaloriesBurned.text = String.format("%.0f", displayCalories)
@@ -264,6 +317,9 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         binding.progressCalories.progress = caloriePercent
         binding.txtCaloriePercent.text = "$caloriePercent% of daily goal"
 
+        // Update activity progress (cumulative daily goal)
+        updateActivityProgress(dailyData)
+
         // If we have steps from daily store, use them
         if (dailyData.totalSteps > 0) {
             currentSteps = dailyData.totalSteps
@@ -271,91 +327,62 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         }
     }
 
-    /**
-     * Estimates calories burned based on time of day using average cal/min rate.
-     * Assumes user has been active since midnight with average activity level.
-     */
-    private fun estimateCaloriesFromTime(): Float {
-        val calendar = java.util.Calendar.getInstance()
-        val hourOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY)
-        val minuteOfHour = calendar.get(java.util.Calendar.MINUTE)
+    private fun updateActivityProgress(dailyData: DailyActivityStore.DailyActivityData) {
+        // Calculate activity score (equivalent moderate minutes)
+        val activityScore = dailyData.calculateActivityScore()
 
-        // Minutes since midnight
-        val minutesSinceMidnight = (hourOfDay * 60) + minuteOfHour
+        // Calculate percentage toward goal
+        val activityPercent = if (activityGoal > 0) {
+            ((activityScore / activityGoal) * 100).coerceAtMost(100f).toInt()
+        } else {
+            0
+        }
 
-        // Estimate: average person burns ~1.2 cal/min at rest + light activity
-        // Adjust for sleep (lower rate) - assume 6 hours of sleep (360 min) at 0.8 cal/min
-        val sleepMinutes = 360.coerceAtMost(minutesSinceMidnight)
-        val awakeMinutes = (minutesSinceMidnight - sleepMinutes).coerceAtLeast(0)
+        // Update UI
+        binding.txtActivityPercent.text = activityPercent.toString()
+        binding.progressActivity.progress = activityPercent
 
-        val sleepCalories = sleepMinutes * 0.8f
-        val awakeCalories = awakeMinutes * AVG_CALORIES_PER_MINUTE
-
-        return sleepCalories + awakeCalories
+        // Show active minutes vs goal
+        val activeMinutes = dailyData.getTotalActiveMinutes()
+        binding.txtActivityMinutes.text = "$activeMinutes / $activityGoal active minutes"
     }
 
     private fun updateActivityUI(data: ActivityTracker.ActivityData) {
-        // Update activity percentage (0-100)
-        val activityPercent = (data.activityLevel * 100).toInt()
-        binding.txtActivityPercent.text = activityPercent.toString()
-
-        // Update activity state text
-        binding.txtActivityState.text = data.activityState.displayName
-
-        // Update activity progress bar (0-100%)
-        binding.progressActivity.progress = activityPercent
-
-        // Update indicator dots
-        updateActivityDots(data.activityState)
-
-        // Record activity sample to daily store
+        // Record activity sample to daily store (only if there's actual activity)
         val currentTime = System.currentTimeMillis()
         val elapsedSeconds = (currentTime - lastCalorieUpdateTime) / 1000f
+
         if (elapsedSeconds >= 1f) {
-            DailyActivityStore.recordActivitySample(
-                context = requireContext(),
-                activityLevel = data.activityLevel,
-                activityState = data.activityState,
-                caloriesPerMinute = data.caloriesPerMinute,
-                durationSeconds = elapsedSeconds
-            )
+            // Only record calories and activity when there's actual movement (not resting)
+            if (data.activityLevel > 0.1f) {
+                DailyActivityStore.recordActivitySample(
+                    context = requireContext(),
+                    activityLevel = data.activityLevel,
+                    activityState = data.activityState,
+                    caloriesPerMinute = data.caloriesPerMinute,
+                    durationSeconds = elapsedSeconds
+                )
+            }
             lastCalorieUpdateTime = currentTime
 
-            // Update calorie display from daily store
+            // Update displays from daily store
             val dailyData = DailyActivityStore.getTodayData(requireContext())
-            var displayCalories = dailyData.totalCalories
-            if (displayCalories < 1f) {
-                displayCalories = estimateCaloriesFromTime()
-            }
-            binding.txtCaloriesBurned.text = String.format("%.0f", displayCalories)
+
+            // Update calorie display (active calories only)
+            binding.txtCaloriesBurned.text = String.format("%.0f", dailyData.totalCalories)
 
             // Update calorie progress
             val caloriePercent = if (calorieGoal > 0) {
-                ((displayCalories / calorieGoal) * 100).coerceAtMost(100f).toInt()
+                ((dailyData.totalCalories / calorieGoal) * 100).coerceAtMost(100f).toInt()
             } else {
                 0
             }
             binding.progressCalories.progress = caloriePercent
             binding.txtCaloriePercent.text = "$caloriePercent% of daily goal"
+
+            // Update activity progress (cumulative daily goal)
+            updateActivityProgress(dailyData)
         }
-    }
-
-    private fun updateActivityDots(state: ActivityTracker.ActivityState) {
-        val activeDrawable = R.drawable.activity_dot_active
-        val inactiveDrawable = R.drawable.activity_dot_inactive
-
-        binding.dotSedentary.setBackgroundResource(
-            if (state.ordinal >= ActivityTracker.ActivityState.RESTING.ordinal) activeDrawable else inactiveDrawable
-        )
-        binding.dotLight.setBackgroundResource(
-            if (state.ordinal >= ActivityTracker.ActivityState.LIGHT.ordinal) activeDrawable else inactiveDrawable
-        )
-        binding.dotModerate.setBackgroundResource(
-            if (state.ordinal >= ActivityTracker.ActivityState.MODERATE.ordinal) activeDrawable else inactiveDrawable
-        )
-        binding.dotVigorous.setBackgroundResource(
-            if (state.ordinal >= ActivityTracker.ActivityState.VIGOROUS.ordinal) activeDrawable else inactiveDrawable
-        )
     }
 
     // -------------------------------------------------
