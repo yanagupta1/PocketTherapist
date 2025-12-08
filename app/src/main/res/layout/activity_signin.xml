@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Welcome back to PocketTherapist"
+            android:text="welcome back"
             style="@style/TextAppearance.App.FragmentSubtitle" />
 
         <!-- Form Container -->

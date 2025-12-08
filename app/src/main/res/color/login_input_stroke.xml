@@ -3,5 +3,5 @@
     <!-- Focused state - bright green -->
     <item android:state_focused="true" android:color="@color/accent_green"/>
     <!-- Unfocused state - lighter, more visible -->
-    <item android:color="#8082E0AA"/>
+    <item android:color="#806ABF8A"/>
 </selector>

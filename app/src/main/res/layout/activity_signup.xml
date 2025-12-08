@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Create your PocketTherapist account"
+            android:text="create your account!"
             style="@style/TextAppearance.App.FragmentSubtitle" />
 
         <!-- Form Container -->
@@ -51,23 +51,41 @@
                     android:textColor="@color/text_light" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Password Input -->
+            <!-- Full Name Input -->
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilPassword"
+                android:id="@+id/tilFullName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:hint="@string/password"
-                app:endIconMode="password_toggle"
+                android:hint="Full Name"
+                style="@style/LoginInputStyle">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etFullName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPersonName"
+                    android:autofillHints="name"
+                    android:textColor="@color/text_light" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Location Input (Auto-captured) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="Location"
+                app:endIconMode="custom"
+                app:endIconDrawable="@drawable/ic_location"
                 app:endIconTint="@color/accent_green"
                 style="@style/LoginInputStyle">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPassword"
+                    android:id="@+id/etLocation"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textPassword"
-                    android:autofillHints="password"
+                    android:inputType="text"
                     android:textColor="@color/text_light" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -88,20 +106,23 @@
                     android:textColor="@color/text_light" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Gender Dropdown -->
+            <!-- Password Input -->
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilGender"
+                android:id="@+id/tilPassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:hint="Gender"
-                style="@style/LoginDropdownStyle">
+                android:hint="@string/password"
+                app:endIconMode="password_toggle"
+                app:endIconTint="@color/accent_green"
+                style="@style/LoginInputStyle">
 
-                <AutoCompleteTextView
-                    android:id="@+id/inputGender"
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="none"
+                    android:inputType="textPassword"
+                    android:autofillHints="password"
                     android:textColor="@color/text_light" />
             </com.google.android.material.textfield.TextInputLayout>
 

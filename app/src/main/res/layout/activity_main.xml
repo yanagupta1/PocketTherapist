@@ -3,7 +3,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
 
     <FrameLayout
         android:id="@+id/fragment_container"
@@ -13,9 +14,9 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNav"
         android:layout_width="match_parent"
-        android:layout_height="70dp"
+        android:layout_height="68dp"
         android:layout_gravity="bottom"
-        android:background="@color/dark_surface"
+        android:background="@color/black"
         app:itemActiveIndicatorStyle="@null"
         app:itemBackground="@android:color/transparent"
         app:itemIconSize="24dp"

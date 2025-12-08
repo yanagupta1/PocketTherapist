@@ -74,8 +74,9 @@ object UserStore {
     fun signUp(
         username: String,
         password: String,
+        fullName: String,
+        location: String,
         age: String,
-        gender: String,
         onSuccess: () -> Unit,
         onFailure: (String) -> Unit
     ) {
@@ -86,14 +87,16 @@ object UserStore {
                 } else {
                     val userData = mapOf(
                         "password" to password,
-                        "age" to age,
-                        "gender" to gender
+                        "displayName" to fullName,
+                        "location" to location,
+                        "age" to age
                     )
                     usersRef.child(username).setValue(userData)
                         .addOnSuccessListener {
                             loggedInUser = username
+                            this@UserStore.displayName = fullName
+                            this@UserStore.location = location
                             this@UserStore.age = age
-                            this@UserStore.gender = gender
                             saveSession()
                             onSuccess()
                         }
