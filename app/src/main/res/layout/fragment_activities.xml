@@ -164,19 +164,18 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Header row with label -->
+                    <!-- Header -->
                     <TextView
                         android:id="@+id/txtActivityLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Activity Level"
+                        android:text="ACTIVITY LEVEL"
                         android:textColor="@color/accent_purple"
                         android:fontFamily="@font/poppins_semibold"
                         android:textSize="12sp"
-                        android:textAllCaps="true"
                         android:letterSpacing="0.05" />
 
-                    <!-- Activity status row -->
+                    <!-- Activity percentage and state row -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -185,52 +184,80 @@
                         android:gravity="center_vertical">
 
                         <TextView
-                            android:id="@+id/txtActivityState"
+                            android:id="@+id/txtActivityPercent"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Sedentary"
+                            android:text="0"
                             android:textColor="@color/text_light"
                             android:fontFamily="@font/poppins_semibold"
-                            android:textSize="24sp" />
+                            android:textSize="32sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="%"
+                            android:textColor="@color/hint_color"
+                            android:fontFamily="@font/poppins_regular"
+                            android:textSize="18sp" />
 
                         <View
                             android:layout_width="0dp"
                             android:layout_height="0dp"
                             android:layout_weight="1" />
 
-                        <!-- Activity indicator dots -->
+                        <!-- Activity state with dots -->
                         <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
+                            android:orientation="vertical"
+                            android:gravity="end">
 
-                            <View
-                                android:id="@+id/dotSedentary"
-                                android:layout_width="12dp"
-                                android:layout_height="12dp"
-                                android:layout_marginEnd="6dp"
-                                android:background="@drawable/activity_dot_active" />
+                            <TextView
+                                android:id="@+id/txtActivityState"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Resting"
+                                android:textColor="@color/text_light"
+                                android:fontFamily="@font/poppins_medium"
+                                android:textSize="16sp" />
 
-                            <View
-                                android:id="@+id/dotLight"
-                                android:layout_width="12dp"
-                                android:layout_height="12dp"
-                                android:layout_marginEnd="6dp"
-                                android:background="@drawable/activity_dot_inactive" />
+                            <!-- Activity indicator dots -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
 
-                            <View
-                                android:id="@+id/dotModerate"
-                                android:layout_width="12dp"
-                                android:layout_height="12dp"
-                                android:layout_marginEnd="6dp"
-                                android:background="@drawable/activity_dot_inactive" />
+                                <View
+                                    android:id="@+id/dotSedentary"
+                                    android:layout_width="10dp"
+                                    android:layout_height="10dp"
+                                    android:layout_marginEnd="4dp"
+                                    android:background="@drawable/activity_dot_active" />
 
-                            <View
-                                android:id="@+id/dotVigorous"
-                                android:layout_width="12dp"
-                                android:layout_height="12dp"
-                                android:background="@drawable/activity_dot_inactive" />
+                                <View
+                                    android:id="@+id/dotLight"
+                                    android:layout_width="10dp"
+                                    android:layout_height="10dp"
+                                    android:layout_marginEnd="4dp"
+                                    android:background="@drawable/activity_dot_inactive" />
+
+                                <View
+                                    android:id="@+id/dotModerate"
+                                    android:layout_width="10dp"
+                                    android:layout_height="10dp"
+                                    android:layout_marginEnd="4dp"
+                                    android:background="@drawable/activity_dot_inactive" />
+
+                                <View
+                                    android:id="@+id/dotVigorous"
+                                    android:layout_width="10dp"
+                                    android:layout_height="10dp"
+                                    android:background="@drawable/activity_dot_inactive" />
+
+                            </LinearLayout>
 
                         </LinearLayout>
 
@@ -248,158 +275,107 @@
                         android:progressTint="@color/accent_purple"
                         android:progressBackgroundTint="@color/dark_gray" />
 
-                    <!-- Metrics row -->
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- Calories Card -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardCalories"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/dark_card"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header with edit button -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:orientation="horizontal">
-
-                        <!-- Calories -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center">
-
-                            <TextView
-                                android:id="@+id/txtCaloriesValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="0.0"
-                                android:textColor="@color/text_light"
-                                android:fontFamily="@font/poppins_semibold"
-                                android:textSize="18sp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="cal/min"
-                                android:textColor="@color/hint_color"
-                                android:fontFamily="@font/poppins_regular"
-                                android:textSize="11sp" />
-
-                        </LinearLayout>
-
-                        <!-- Divider -->
-                        <View
-                            android:layout_width="1dp"
-                            android:layout_height="match_parent"
-                            android:background="@color/dark_gray" />
-
-                        <!-- Movement -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center">
-
-                            <TextView
-                                android:id="@+id/txtMovementValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="0.0"
-                                android:textColor="@color/text_light"
-                                android:fontFamily="@font/poppins_semibold"
-                                android:textSize="18sp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="movement"
-                                android:textColor="@color/hint_color"
-                                android:fontFamily="@font/poppins_regular"
-                                android:textSize="11sp" />
-
-                        </LinearLayout>
-
-                        <!-- Divider -->
-                        <View
-                            android:layout_width="1dp"
-                            android:layout_height="match_parent"
-                            android:background="@color/dark_gray" />
-
-                        <!-- Rotation -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:gravity="center">
-
-                            <TextView
-                                android:id="@+id/txtRotationValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="0.0"
-                                android:textColor="@color/text_light"
-                                android:fontFamily="@font/poppins_semibold"
-                                android:textSize="18sp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="rotation"
-                                android:textColor="@color/hint_color"
-                                android:fontFamily="@font/poppins_regular"
-                                android:textSize="11sp" />
-
-                        </LinearLayout>
-
-                    </LinearLayout>
-
-                    <!-- Session stats -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
                         android:orientation="horizontal"
                         android:gravity="center_vertical">
 
                         <TextView
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="Session calories: "
-                            android:textColor="@color/hint_color"
-                            android:fontFamily="@font/poppins_regular"
-                            android:textSize="12sp" />
+                            android:layout_weight="1"
+                            android:text="DAILY CALORIES"
+                            android:textColor="@color/accent_purple"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:textSize="12sp"
+                            android:letterSpacing="0.05" />
+
+                        <ImageView
+                            android:id="@+id/btnEditCalorieGoal"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_edit"
+                            android:contentDescription="Edit calorie goal"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                    </LinearLayout>
+
+                    <!-- Calorie count display -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical">
 
                         <TextView
-                            android:id="@+id/txtSessionCalories"
+                            android:id="@+id/txtCaloriesBurned"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0"
-                            android:textColor="@color/accent_purple"
+                            android:textColor="@color/text_light"
                             android:fontFamily="@font/poppins_semibold"
-                            android:textSize="12sp" />
+                            android:textSize="32sp" />
 
                         <TextView
+                            android:id="@+id/txtCalorieGoal"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text=" cal"
+                            android:layout_marginStart="8dp"
+                            android:text="/ 500 cal"
                             android:textColor="@color/hint_color"
                             android:fontFamily="@font/poppins_regular"
-                            android:textSize="12sp" />
-
-                        <View
-                            android:layout_width="0dp"
-                            android:layout_height="0dp"
-                            android:layout_weight="1" />
-
-                        <!-- Context indicator -->
-                        <TextView
-                            android:id="@+id/txtContextIndicator"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Active"
-                            android:textColor="@color/hint_color"
-                            android:fontFamily="@font/poppins_regular"
-                            android:textSize="11sp"
-                            android:drawablePadding="4dp" />
+                            android:textSize="16sp" />
 
                     </LinearLayout>
+
+                    <!-- Calorie progress bar -->
+                    <ProgressBar
+                        android:id="@+id/progressCalories"
+                        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="12dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressTint="@color/accent_purple"
+                        android:progressBackgroundTint="@color/dark_gray" />
+
+                    <!-- Calorie progress percentage -->
+                    <TextView
+                        android:id="@+id/txtCaloriePercent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="0% of daily goal"
+                        android:textColor="@color/hint_color"
+                        android:fontFamily="@font/poppins_regular"
+                        android:textSize="12sp" />
 
                 </LinearLayout>
 

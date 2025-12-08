@@ -35,7 +35,7 @@ class ActivityTracker(private val context: Context) : SensorEventListener {
 
     // Activity metrics
     private var activityLevel = 0f // 0.0 to 1.0
-    private var activityState = ActivityState.SEDENTARY
+    private var activityState = ActivityState.RESTING
     private var caloriesPerMinute = 0f
 
     // Calorie calculation parameters
@@ -258,7 +258,7 @@ class ActivityTracker(private val context: Context) : SensorEventListener {
         lightKalman.reset()
         activityHistory.clear()
         activityLevel = 0f
-        activityState = ActivityState.SEDENTARY
+        activityState = ActivityState.RESTING
         caloriesPerMinute = 0f
     }
 }
