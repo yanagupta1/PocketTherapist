@@ -2,8 +2,18 @@
 
     <item
         android:id="@+id/nav_home"
-        android:title="Home"
-        android:icon="@drawable/ic_home" />
+        android:title="Journal"
+        android:icon="@drawable/ic_journal" />
+
+    <item
+        android:id="@+id/nav_activities"
+        android:title="Activities"
+        android:icon="@drawable/ic_activities" />
+
+    <item
+        android:id="@+id/nav_recommendations"
+        android:title="Recommendations"
+        android:icon="@drawable/ic_recommendations" />
 
     <item
         android:id="@+id/nav_profile"

@@ -81,7 +81,8 @@ class TestRecommendationActivity : AppCompatActivity() {
             text = "Click a button to test the recommendation engine.\n\nNote: This requires internet connection to call Gemini API."
             textSize = 14f
             setPadding(16, 16, 16, 16)
-            setBackgroundColor(0xFFEEEEEE.toInt())
+            setBackgroundColor(0xFF2D2D2D.toInt())
+            setTextColor(0xFFE0E0E0.toInt())
         }
 
         scrollView.addView(outputText)

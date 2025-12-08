@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="24dp"
-    android:background="#F8F5FF">
+    android:background="@color/dark_surface">
 
     <!-- Back Button -->
     <ImageView
@@ -13,7 +13,7 @@
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:src="@android:drawable/ic_media_previous"
-        app:tint="#6A5AE0"
+        app:tint="@color/text_light"
         android:padding="4dp"
         android:contentDescription="Back"
         android:layout_marginBottom="20dp" />
@@ -25,12 +25,14 @@
         android:layout_height="350dp"
         android:hint="Write your thoughts..."
         android:gravity="top"
-        android:background="@android:drawable/edit_text"
+        android:background="@drawable/rounded_card"
         android:padding="16dp"
         android:textSize="16sp"
         android:layout_marginBottom="30dp"
         android:inputType="textMultiLine"
-        android:autofillHints="text" />
+        android:autofillHints="text"
+        android:textColor="@color/text_light"
+        android:textColorHint="@color/hint_color" />
 
     <!-- Analyse Mood Button -->
     <Button
@@ -40,7 +42,7 @@
         android:text="Analyse My Mood"
         android:textSize="16sp"
         android:textColor="@android:color/white"
-        android:backgroundTint="#6A5AE0"
+        android:backgroundTint="@color/accent"
         android:fontFamily="sans-serif-medium"
         android:padding="16dp" />
 
