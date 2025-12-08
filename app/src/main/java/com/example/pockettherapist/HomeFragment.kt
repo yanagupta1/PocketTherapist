@@ -2,6 +2,8 @@ package com.example.pockettherapist
 
 import android.Manifest
 import android.animation.AnimatorSet
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.ItemTouchHelper
 import android.animation.ObjectAnimator
 import android.content.pm.PackageManager
 import android.graphics.drawable.GradientDrawable
@@ -59,6 +61,7 @@ class HomeFragment : Fragment() {
         checkMicPermission()
         setupAudioHelper()
         setupRecyclerView()
+        addSwipeToDelete()
         setupFab()
         setupOverlay()
         loadJournalEntries()
@@ -307,4 +310,39 @@ class HomeFragment : Fragment() {
         audioHelper?.destroy()
         audioHelper = null
     }
+
+    private fun addSwipeToDelete() {
+        val swipeHandler = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
+
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean = false
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val position = viewHolder.adapterPosition
+                val item = adapter.currentList[position]
+
+                if (item is JournalListItem.Entry) {
+
+                    // 1. Remove from local list
+                    journalEntries.remove(item.entry)
+                    updateList()
+
+                    // 2. Delete from UserStore (Firebase)
+                    UserStore.deleteJournalEntry(
+                        item.entry.id,
+                        onSuccess = {},
+                        onFailure = {
+                            Toast.makeText(requireContext(), "Delete failed", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+            }
+        }
+
+        ItemTouchHelper(swipeHandler).attachToRecyclerView(binding.journalRecycler)
+    }
+
 }
