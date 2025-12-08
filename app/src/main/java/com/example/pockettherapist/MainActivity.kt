@@ -1,9 +1,13 @@
 package com.example.pockettherapist
 
 import android.content.res.ColorStateList
+import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import com.example.pockettherapist.databinding.ActivityMainBinding
 
@@ -15,6 +19,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Enable edge-to-edge - content draws behind status bar
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // Make status bar transparent so gradient shows through
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.parseColor("#0D0D0D")
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars = false
 
         // Show HOME first (user already logged in)
         replaceFragment(HomeFragment())

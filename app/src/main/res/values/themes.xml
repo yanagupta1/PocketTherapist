@@ -3,6 +3,11 @@
     <style name="Base.Theme.PocketTherapist" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="android:statusBarColor">#0D0D0D</item>
+        <item name="android:navigationBarColor">#0D0D0D</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+
     </style>
 
     <style name="Theme.PocketTherapist" parent="Base.Theme.PocketTherapist" />
@@ -23,7 +28,7 @@
     <style name="TextAppearance.App.FragmentSubtitle">
         <item name="fontFamily">@font/poppins_regular</item>
         <item name="android:fontFamily">@font/poppins_regular</item>
-        <item name="android:textSize">14sp</item>
+        <item name="android:textSize">12sp</item>
         <item name="android:textColor">@color/text_light</item>
     </style>
 
