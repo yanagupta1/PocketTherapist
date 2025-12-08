@@ -76,4 +76,29 @@
         <item name="android:textColorHint">@color/text_light</item>
         <item name="helperTextTextColor">@color/text_light</item>
     </style>
+
+    <!-- Login/Signup Input Field Style (Green) -->
+    <style name="LoginInputStyle" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/dark_card</item>
+        <item name="boxStrokeColor">@color/login_input_stroke</item>
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+        <item name="hintTextColor">@color/accent_green</item>
+        <item name="android:textColorHint">@color/text_light</item>
+        <item name="helperTextTextColor">@color/text_light</item>
+    </style>
+
+    <!-- Login/Signup Dropdown Style (Green) -->
+    <style name="LoginDropdownStyle" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        <item name="boxBackgroundColor">@color/dark_card</item>
+        <item name="boxStrokeColor">@color/login_input_stroke</item>
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+        <item name="hintTextColor">@color/accent_green</item>
+        <item name="android:textColorHint">@color/text_light</item>
+    </style>
 </resources>

@@ -43,7 +43,9 @@
     <string name="edit_goal">Edit goal</string>
     <string name="set_step_goal">Set Step Goal</string>
     <string name="enter_step_goal">Enter your daily step goal</string>
-    <string name="wellness_places">Wellness Places Near You</string>
+    <string name="events_near_you">Events Near You</string>
+    <string name="no_events_found">No events found nearby</string>
+    <string name="wellness_places">Wellness Places</string>
     <string name="loading_places">Finding wellness places…</string>
     <string name="no_places_found">No wellness places found nearby</string>
 

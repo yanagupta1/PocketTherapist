@@ -24,10 +24,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.pockettherapist.adapters.AmenityAdapter
+import com.example.pockettherapist.adapters.TMEventAdapter
 import com.example.pockettherapist.databinding.FragmentActivitiesBinding
 import com.google.android.gms.location.LocationServices
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
@@ -44,8 +46,9 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
     private var currentSteps = 0
     private var stepGoal = DEFAULT_STEP_GOAL
 
-    // Cached amenities
+    // Cached data
     private var cachedAmenities: List<RecommendationEngine.ResourceDetail>? = null
+    private var cachedEvents: List<RecommendationEngine.EventDetail>? = null
 
     private val activityPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -64,10 +67,10 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         if (granted) {
             loadUserLocationAndFetch(forceRefresh = false)
         } else {
-            binding.layoutAmenitiesLoading.visibility = View.GONE
+            hideAllLoading()
             binding.layoutAmenitiesEmpty.visibility = View.VISIBLE
-            binding.swipeRefresh.isRefreshing = false
-            Toast.makeText(requireContext(), "Location permission required for nearby places", Toast.LENGTH_SHORT).show()
+            binding.txtEventsEmpty.visibility = View.VISIBLE
+            Toast.makeText(requireContext(), "Location permission required", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -78,8 +81,9 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         private const val KEY_LAST_SAVE_DATE = "last_save_date"
         private const val DEFAULT_STEP_GOAL = 7000
 
-        private const val AMENITIES_PREFS_NAME = "amenities_cache"
+        private const val CACHE_PREFS_NAME = "activities_cache"
         private const val KEY_CACHED_AMENITIES = "cached_amenities"
+        private const val KEY_CACHED_EVENTS = "cached_events"
         private const val KEY_CACHE_LOCATION = "cache_location"
     }
 
@@ -96,14 +100,15 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         // Initialize recommendation engine
         recommendationEngine = RecommendationEngine(requireContext())
 
-        // Setup RecyclerView
-        binding.recyclerAmenities.layoutManager = LinearLayoutManager(requireContext())
+        // Setup horizontal RecyclerViews
+        binding.recyclerEvents.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        binding.recyclerAmenities.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 
         // Setup SwipeRefreshLayout
         binding.swipeRefresh.setColorSchemeResources(R.color.accent_purple)
         binding.swipeRefresh.setProgressBackgroundColorSchemeResource(R.color.dark_card)
         binding.swipeRefresh.setOnRefreshListener {
-            refreshAmenities()
+            refreshData()
         }
 
         // Step counter setup
@@ -112,49 +117,80 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         updateStepUI()
         checkActivityPermissionAndSetupSensor()
 
-        // Amenities setup - load from cache first
-        loadCachedAmenities()
+        // Load from cache first
+        loadCachedData()
     }
 
     // -------------------------------------------------
-    // AMENITIES CACHING
+    // CACHING
     // -------------------------------------------------
 
-    private fun loadCachedAmenities() {
-        val prefs = requireContext().getSharedPreferences(AMENITIES_PREFS_NAME, Context.MODE_PRIVATE)
-        val cachedJson = prefs.getString(KEY_CACHED_AMENITIES, null)
+    private fun loadCachedData() {
+        val prefs = requireContext().getSharedPreferences(CACHE_PREFS_NAME, Context.MODE_PRIVATE)
 
-        if (cachedJson != null) {
+        // Load cached events
+        val cachedEventsJson = prefs.getString(KEY_CACHED_EVENTS, null)
+        if (cachedEventsJson != null) {
+            try {
+                val type = object : TypeToken<List<RecommendationEngine.EventDetail>>() {}.type
+                cachedEvents = gson.fromJson(cachedEventsJson, type)
+                if (cachedEvents != null && cachedEvents!!.isNotEmpty()) {
+                    displayEvents(cachedEvents!!)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ActivitiesFragment", "Error parsing cached events", e)
+            }
+        }
+
+        // Load cached amenities
+        val cachedAmenitiesJson = prefs.getString(KEY_CACHED_AMENITIES, null)
+        if (cachedAmenitiesJson != null) {
             try {
                 val type = object : TypeToken<List<RecommendationEngine.ResourceDetail>>() {}.type
-                cachedAmenities = gson.fromJson(cachedJson, type)
-
+                cachedAmenities = gson.fromJson(cachedAmenitiesJson, type)
                 if (cachedAmenities != null && cachedAmenities!!.isNotEmpty()) {
-                    // Show cached data immediately
                     displayAmenities(cachedAmenities!!)
-                    return
                 }
             } catch (e: Exception) {
                 android.util.Log.e("ActivitiesFragment", "Error parsing cached amenities", e)
             }
         }
 
-        // No cache, fetch fresh data
-        checkLocationPermissionAndLoad()
+        // If no cache, fetch fresh data
+        if (cachedEvents == null && cachedAmenities == null) {
+            checkLocationPermissionAndLoad()
+        }
     }
 
-    private fun saveCachedAmenities(amenities: List<RecommendationEngine.ResourceDetail>, location: String) {
-        val prefs = requireContext().getSharedPreferences(AMENITIES_PREFS_NAME, Context.MODE_PRIVATE)
-        val json = gson.toJson(amenities)
-        prefs.edit()
-            .putString(KEY_CACHED_AMENITIES, json)
-            .putString(KEY_CACHE_LOCATION, location)
-            .apply()
+    private fun saveCache(events: List<RecommendationEngine.EventDetail>?, amenities: List<RecommendationEngine.ResourceDetail>?, location: String) {
+        val prefs = requireContext().getSharedPreferences(CACHE_PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+
+        if (events != null) {
+            editor.putString(KEY_CACHED_EVENTS, gson.toJson(events))
+        }
+        if (amenities != null) {
+            editor.putString(KEY_CACHED_AMENITIES, gson.toJson(amenities))
+        }
+        editor.putString(KEY_CACHE_LOCATION, location)
+        editor.apply()
+    }
+
+    private fun displayEvents(events: List<RecommendationEngine.EventDetail>) {
+        binding.layoutEventsLoading.visibility = View.GONE
+
+        if (events.isNotEmpty()) {
+            binding.recyclerEvents.visibility = View.VISIBLE
+            binding.txtEventsEmpty.visibility = View.GONE
+            binding.recyclerEvents.adapter = TMEventAdapter(events)
+        } else {
+            binding.recyclerEvents.visibility = View.GONE
+            binding.txtEventsEmpty.visibility = View.VISIBLE
+        }
     }
 
     private fun displayAmenities(amenities: List<RecommendationEngine.ResourceDetail>) {
         binding.layoutAmenitiesLoading.visibility = View.GONE
-        binding.swipeRefresh.isRefreshing = false
 
         if (amenities.isNotEmpty()) {
             binding.recyclerAmenities.visibility = View.VISIBLE
@@ -166,11 +202,17 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         }
     }
 
+    private fun hideAllLoading() {
+        binding.layoutEventsLoading.visibility = View.GONE
+        binding.layoutAmenitiesLoading.visibility = View.GONE
+        binding.swipeRefresh.isRefreshing = false
+    }
+
     // -------------------------------------------------
-    // LOCATION & AMENITIES
+    // LOCATION & DATA LOADING
     // -------------------------------------------------
 
-    private fun refreshAmenities() {
+    private fun refreshData() {
         checkLocationPermissionAndLoad(forceRefresh = true)
     }
 
@@ -189,12 +231,19 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
     @SuppressLint("MissingPermission")
     private fun loadUserLocationAndFetch(forceRefresh: Boolean) {
         if (forceRefresh) {
-            // Show loading only on force refresh, keep existing content visible
             binding.swipeRefresh.isRefreshing = true
         } else {
-            binding.layoutAmenitiesLoading.visibility = View.VISIBLE
-            binding.recyclerAmenities.visibility = View.GONE
-            binding.layoutAmenitiesEmpty.visibility = View.GONE
+            // Show loading only if no cached data
+            if (cachedEvents == null) {
+                binding.layoutEventsLoading.visibility = View.VISIBLE
+                binding.recyclerEvents.visibility = View.GONE
+                binding.txtEventsEmpty.visibility = View.GONE
+            }
+            if (cachedAmenities == null) {
+                binding.layoutAmenitiesLoading.visibility = View.VISIBLE
+                binding.recyclerAmenities.visibility = View.GONE
+                binding.layoutAmenitiesEmpty.visibility = View.GONE
+            }
         }
 
         val fused = LocationServices.getFusedLocationProviderClient(requireActivity())
@@ -202,19 +251,17 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         fused.lastLocation
             .addOnSuccessListener { loc ->
                 if (loc != null) {
-                    loadAmenities(loc.latitude, loc.longitude)
+                    loadData(loc.latitude, loc.longitude)
                 } else {
-                    // Fallback to Madison, WI
-                    loadAmenities(43.0731, -89.4012)
+                    loadData(43.0731, -89.4012) // Fallback
                 }
             }
             .addOnFailureListener {
-                // Fallback to Madison, WI
-                loadAmenities(43.0731, -89.4012)
+                loadData(43.0731, -89.4012) // Fallback
             }
     }
 
-    private fun loadAmenities(lat: Double, lng: Double) {
+    private fun loadData(lat: Double, lng: Double) {
         lifecycleScope.launch {
             try {
                 val locationString = getLocationString(lat, lng)
@@ -226,35 +273,63 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
                     sentimentScore = 0.5f
                 )
 
-                val nearbyHelp = recommendationEngine.getNearbyHelp(
-                    journalText = "Looking for nearby mental health resources and wellness amenities",
-                    emotionData = emotionData,
-                    location = locationString
-                )
+                // Load events and amenities in parallel
+                val eventsDeferred = async {
+                    recommendationEngine.getEventRecommendations(
+                        location = locationString,
+                        emotionData = emotionData
+                    )
+                }
 
+                val amenitiesDeferred = async {
+                    recommendationEngine.getNearbyHelp(
+                        journalText = "Looking for nearby mental health resources and wellness amenities",
+                        emotionData = emotionData,
+                        location = locationString
+                    )
+                }
+
+                val eventRecs = eventsDeferred.await()
+                val nearbyHelp = amenitiesDeferred.await()
+
+                // Update events
+                if (eventRecs != null && eventRecs.events.isNotEmpty()) {
+                    cachedEvents = eventRecs.events
+                    displayEvents(eventRecs.events)
+                } else {
+                    binding.layoutEventsLoading.visibility = View.GONE
+                    if (cachedEvents == null) {
+                        binding.txtEventsEmpty.visibility = View.VISIBLE
+                    }
+                }
+
+                // Update amenities
                 if (nearbyHelp != null && nearbyHelp.resources.isNotEmpty()) {
                     cachedAmenities = nearbyHelp.resources
-                    saveCachedAmenities(nearbyHelp.resources, locationString)
                     displayAmenities(nearbyHelp.resources)
                 } else {
                     binding.layoutAmenitiesLoading.visibility = View.GONE
-                    binding.swipeRefresh.isRefreshing = false
-                    binding.recyclerAmenities.visibility = View.GONE
-                    binding.layoutAmenitiesEmpty.visibility = View.VISIBLE
+                    if (cachedAmenities == null) {
+                        binding.layoutAmenitiesEmpty.visibility = View.VISIBLE
+                    }
                 }
 
-            } catch (e: Exception) {
-                binding.layoutAmenitiesLoading.visibility = View.GONE
+                // Save to cache
+                saveCache(cachedEvents, cachedAmenities, locationString)
+
                 binding.swipeRefresh.isRefreshing = false
 
-                // If we have cached data, keep showing it
-                if (cachedAmenities != null && cachedAmenities!!.isNotEmpty()) {
+            } catch (e: Exception) {
+                hideAllLoading()
+
+                if (cachedEvents != null || cachedAmenities != null) {
                     Toast.makeText(requireContext(), "Could not refresh. Showing cached data.", Toast.LENGTH_SHORT).show()
                 } else {
+                    binding.txtEventsEmpty.visibility = View.VISIBLE
                     binding.layoutAmenitiesEmpty.visibility = View.VISIBLE
                 }
 
-                android.util.Log.e("ActivitiesFragment", "Error loading amenities", e)
+                android.util.Log.e("ActivitiesFragment", "Error loading data", e)
             }
         }
     }
