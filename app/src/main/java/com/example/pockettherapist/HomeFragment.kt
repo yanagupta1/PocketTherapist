@@ -1,5 +1,8 @@
 package com.example.pockettherapist
 
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.Manifest
 import android.animation.AnimatorSet
 import androidx.recyclerview.widget.RecyclerView
@@ -24,6 +27,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+
 
 class HomeFragment : Fragment() {
 
@@ -312,7 +316,8 @@ class HomeFragment : Fragment() {
     }
 
     private fun addSwipeToDelete() {
-        val swipeHandler = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
+        val swipeHandler = object : ItemTouchHelper.SimpleCallback(0,
+            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
 
             override fun onMove(
                 recyclerView: RecyclerView,
@@ -320,29 +325,64 @@ class HomeFragment : Fragment() {
                 target: RecyclerView.ViewHolder
             ): Boolean = false
 
+            override fun onChildDraw(
+                c: Canvas,
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                dX: Float,
+                dY: Float,
+                actionState: Int,
+                isCurrentlyActive: Boolean
+            ) {
+                val itemView = viewHolder.itemView
+                val background = ColorDrawable(Color.RED)
+                val icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_delete)
+
+                val iconMargin = (itemView.height - icon!!.intrinsicHeight) / 2
+                val iconTop = itemView.top + (itemView.height - icon.intrinsicHeight) / 2
+                val iconBottom = iconTop + icon.intrinsicHeight
+
+                if (dX > 0) {   // Right swipe
+                    background.setBounds(itemView.left, itemView.top, itemView.left + dX.toInt(), itemView.bottom)
+                    background.draw(c)
+
+                    val iconLeft = itemView.left + iconMargin
+                    val iconRight = iconLeft + icon.intrinsicWidth
+                    icon.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+                    icon.draw(c)
+                } else if (dX < 0) { // Left swipe
+                    background.setBounds(itemView.right + dX.toInt(), itemView.top, itemView.right, itemView.bottom)
+                    background.draw(c)
+
+                    val iconRight = itemView.right - iconMargin
+                    val iconLeft = iconRight - icon.intrinsicWidth
+                    icon.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+                    icon.draw(c)
+                }
+
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+            }
+
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.adapterPosition
                 val item = adapter.currentList[position]
 
                 if (item is JournalListItem.Entry) {
-
-                    // 1. Remove from local list
                     journalEntries.remove(item.entry)
                     updateList()
 
-                    // 2. Delete from UserStore (Firebase)
-                    UserStore.deleteJournalEntry(
-                        item.entry.id,
+                    UserStore.deleteJournalEntry(item.entry.id,
                         onSuccess = {},
                         onFailure = {
                             Toast.makeText(requireContext(), "Delete failed", Toast.LENGTH_SHORT).show()
-                        }
-                    )
+                        })
                 }
             }
         }
 
         ItemTouchHelper(swipeHandler).attachToRecyclerView(binding.journalRecycler)
     }
+
+
 
 }
