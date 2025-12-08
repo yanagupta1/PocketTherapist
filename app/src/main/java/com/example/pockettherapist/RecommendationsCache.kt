@@ -19,7 +19,11 @@ object RecommendationsCache {
     private const val KEY_WELLNESS_DESCRIPTION = "wellness_description"
     private const val KEY_WELLNESS_DETAILED_EXPLANATION = "wellness_detailed_explanation"
     private const val KEY_WELLNESS_YOUTUBE_URL = "wellness_youtube_url"
+    private const val KEY_WELLNESS_REASONING = "wellness_reasoning"
     private const val KEY_SONGS_JSON = "songs_json"
+    private const val KEY_SONGS_REASONING = "songs_reasoning"
+    private const val KEY_EMOTION = "emotion"
+    private const val KEY_SENTIMENT = "sentiment"
 
     private var prefs: SharedPreferences? = null
 
@@ -47,13 +51,14 @@ object RecommendationsCache {
     /**
      * Save wellness recommendation to cache
      */
-    fun saveWellness(journalId: String, title: String, description: String, detailedExplanation: String = "", youtubeUrl: String = "") {
+    fun saveWellness(journalId: String, title: String, description: String, detailedExplanation: String = "", youtubeUrl: String = "", reasoning: String = "") {
         prefs?.edit()?.apply {
             putString(KEY_LATEST_JOURNAL_ID, journalId)
             putString(KEY_WELLNESS_TITLE, title)
             putString(KEY_WELLNESS_DESCRIPTION, description)
             putString(KEY_WELLNESS_DETAILED_EXPLANATION, detailedExplanation)
             putString(KEY_WELLNESS_YOUTUBE_URL, youtubeUrl)
+            putString(KEY_WELLNESS_REASONING, reasoning)
             apply()
         }
     }
@@ -87,9 +92,17 @@ object RecommendationsCache {
     }
 
     /**
+     * Get cached wellness reasoning
+     */
+    fun getWellnessReasoning(): String? {
+        return prefs?.getString(KEY_WELLNESS_REASONING, null)
+    }
+
+    /**
      * Save songs to cache as JSON
      */
-    fun saveSongs(songs: List<SpotifyIntegration.SpotifyTrack>) {
+    fun saveSongs(songs: List<SpotifyIntegration.SpotifyTrack>, reasoning: String = "") {
+        prefs?.edit()?.putString(KEY_SONGS_REASONING, reasoning)?.apply()
         val jsonArray = JSONArray()
         for (song in songs) {
             val songJson = JSONObject().apply {
@@ -133,6 +146,38 @@ object RecommendationsCache {
         } catch (e: Exception) {
             null
         }
+    }
+
+    /**
+     * Get cached songs reasoning
+     */
+    fun getSongsReasoning(): String? {
+        return prefs?.getString(KEY_SONGS_REASONING, null)
+    }
+
+    /**
+     * Save emotion and sentiment for generating friendly messages
+     */
+    fun saveEmotionData(emotion: String, sentiment: String) {
+        prefs?.edit()?.apply {
+            putString(KEY_EMOTION, emotion)
+            putString(KEY_SENTIMENT, sentiment)
+            apply()
+        }
+    }
+
+    /**
+     * Get cached emotion
+     */
+    fun getEmotion(): String? {
+        return prefs?.getString(KEY_EMOTION, null)
+    }
+
+    /**
+     * Get cached sentiment
+     */
+    fun getSentiment(): String? {
+        return prefs?.getString(KEY_SENTIMENT, null)
     }
 
     /**

@@ -351,7 +351,9 @@ object UserStore {
     // Journal Entry Operations
 
     fun saveJournalEntry(
+        title: String,
         text: String,
+        mood: String = "",
         onSuccess: (JournalEntry) -> Unit,
         onFailure: (String) -> Unit
     ) {
@@ -370,12 +372,16 @@ object UserStore {
         val timestamp = System.currentTimeMillis()
         val entry = JournalEntry(
             id = entryId,
+            title = title,
             text = text,
+            mood = mood,
             timestamp = timestamp
         )
 
         val entryData = mapOf(
+            "title" to title,
             "text" to text,
+            "mood" to mood,
             "timestamp" to timestamp
         )
 
@@ -403,9 +409,11 @@ object UserStore {
                 val entries = mutableListOf<JournalEntry>()
                 for (childSnapshot in snapshot.children) {
                     val id = childSnapshot.key ?: continue
+                    val title = childSnapshot.child("title").getValue(String::class.java) ?: ""
                     val text = childSnapshot.child("text").getValue(String::class.java) ?: ""
+                    val mood = childSnapshot.child("mood").getValue(String::class.java) ?: ""
                     val timestamp = childSnapshot.child("timestamp").getValue(Long::class.java) ?: 0L
-                    entries.add(JournalEntry(id, text, timestamp))
+                    entries.add(JournalEntry(id, title, text, mood, timestamp))
                 }
                 // Sort by timestamp descending (newest first)
                 entries.sortByDescending { it.timestamp }
@@ -435,6 +443,49 @@ object UserStore {
             .addOnFailureListener { e ->
                 onFailure(e.message ?: "Failed to delete journal entry")
             }
+    }
+
+    fun updateJournalEntry(
+        entryId: String,
+        newTitle: String,
+        newText: String,
+        newMood: String = "",
+        onSuccess: (JournalEntry) -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val username = loggedInUser ?: run {
+            onFailure("No user logged in")
+            return
+        }
+
+        val journalRef = usersRef.child(username).child("journals").child(entryId)
+
+        // Get existing timestamp then update
+        journalRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val timestamp = snapshot.child("timestamp").getValue(Long::class.java) ?: System.currentTimeMillis()
+
+                val updates = mapOf(
+                    "title" to newTitle,
+                    "text" to newText,
+                    "mood" to newMood,
+                    "timestamp" to timestamp
+                )
+
+                journalRef.updateChildren(updates)
+                    .addOnSuccessListener {
+                        val updatedEntry = JournalEntry(entryId, newTitle, newText, newMood, timestamp)
+                        onSuccess(updatedEntry)
+                    }
+                    .addOnFailureListener { e ->
+                        onFailure(e.message ?: "Failed to update journal entry")
+                    }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                onFailure(error.message)
+            }
+        })
     }
 
     fun setCurrentUsername(username: String) {

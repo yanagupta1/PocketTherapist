@@ -106,4 +106,10 @@
         <item name="hintTextColor">@color/accent_green</item>
         <item name="android:textColorHint">@color/text_light</item>
     </style>
+
+    <!-- Crisis Alert Dialog Style -->
+    <style name="Theme.PocketTherapist.AlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="android:background">@color/dark_surface</item>
+        <item name="android:windowBackground">@color/dark_surface</item>
+    </style>
 </resources>

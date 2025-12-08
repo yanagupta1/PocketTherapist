@@ -108,7 +108,68 @@ class RecommendationEngine(private val context: Context) {
         val googleMapsUrl: String?
     )
 
-    // ==================== 1. SONG RECOMMENDATIONS ====================
+    // ==================== 1. AI COMPANION RESPONSE ====================
+
+    suspend fun getCompanionResponse(
+        journalText: String,
+        mood: String = ""
+    ): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val prompt = buildCompanionPrompt(journalText, mood)
+                val response = callGeminiAPI(prompt)
+                parseCompanionResponse(response)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting companion response", e)
+                null
+            }
+        }
+    }
+
+    private fun buildCompanionPrompt(journalText: String, mood: String): String {
+        val moodContext = when (mood) {
+            "😊" -> "happy"
+            "😢" -> "sad"
+            "😤" -> "frustrated"
+            "😰" -> "anxious"
+            "😌" -> "calm"
+            else -> ""
+        }
+
+        return """
+You are a warm, empathetic AI companion in a mental wellness journaling app. The user just saved a journal entry. Provide a brief, caring response.
+
+User's journal entry: "$journalText"
+${if (moodContext.isNotEmpty()) "User's selected mood: $moodContext" else ""}
+
+Guidelines:
+- Be warm, understanding, and supportive
+- Keep it SHORT - 1-2 sentences maximum
+- Acknowledge their feelings without being preachy
+- Don't give advice unless they're clearly asking for it
+- Sound natural, like a caring friend
+- Don't use phrases like "I hear you" or "I understand" too much
+- Vary your responses, don't be repetitive
+
+Examples of good responses:
+- "That sounds really tough. It's okay to feel overwhelmed sometimes."
+- "What a lovely moment to capture! Those little joys really do matter."
+- "Work stress can be so draining. Hope you get some rest tonight."
+- "It takes courage to write about difficult feelings like this."
+
+Return ONLY valid JSON:
+{"response": "Your empathetic response here"}
+
+Return ONLY the JSON object, nothing else.
+        """.trimIndent()
+    }
+
+    private fun parseCompanionResponse(response: String): String {
+        val jsonResponse = JSONObject(response)
+        return jsonResponse.getString("response")
+    }
+
+    // ==================== 2. SONG RECOMMENDATIONS ====================
 
     suspend fun getSongRecommendations(
         journalText: String,

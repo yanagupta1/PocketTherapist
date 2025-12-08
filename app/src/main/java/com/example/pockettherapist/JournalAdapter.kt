@@ -4,6 +4,8 @@ import android.animation.ValueAnimator
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -17,7 +19,10 @@ sealed class JournalListItem {
     data class Entry(val entry: JournalEntry) : JournalListItem()
 }
 
-class JournalAdapter : ListAdapter<JournalListItem, RecyclerView.ViewHolder>(JournalDiffCallback()) {
+class JournalAdapter(
+    private val onEditClick: ((JournalEntry) -> Unit)? = null,
+    private val onDeleteClick: ((JournalEntry) -> Unit)? = null
+) : ListAdapter<JournalListItem, RecyclerView.ViewHolder>(JournalDiffCallback()) {
 
     companion object {
         private const val TYPE_DATE_HEADER = 0
@@ -75,16 +80,38 @@ class JournalAdapter : ListAdapter<JournalListItem, RecyclerView.ViewHolder>(Jou
     }
 
     inner class EntryViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val txtTitle: TextView = itemView.findViewById(R.id.txtEntryTitle)
+        private val txtMood: TextView = itemView.findViewById(R.id.txtMood)
         private val txtPreview: TextView = itemView.findViewById(R.id.txtEntryPreview)
         private val txtTime: TextView = itemView.findViewById(R.id.txtEntryTime)
-        private var currentEntryId: String? = null
+        private val layoutActions: LinearLayout = itemView.findViewById(R.id.layoutActions)
+        private val btnEdit: ImageView = itemView.findViewById(R.id.btnEdit)
+        private val btnDelete: ImageView = itemView.findViewById(R.id.btnDelete)
+        private var currentEntry: JournalEntry? = null
 
         fun bind(entry: JournalEntry) {
-            currentEntryId = entry.id
+            currentEntry = entry
             val isExpanded = expandedEntryId == entry.id
+
+            // Show title if available
+            if (entry.title.isNotEmpty()) {
+                txtTitle.text = entry.title
+                txtTitle.visibility = View.VISIBLE
+            } else {
+                txtTitle.visibility = View.GONE
+            }
+
+            // Show mood emoji if available
+            if (entry.mood.isNotEmpty()) {
+                txtMood.text = entry.mood
+                txtMood.visibility = View.VISIBLE
+            } else {
+                txtMood.visibility = View.GONE
+            }
 
             txtPreview.text = entry.text
             txtPreview.maxLines = if (isExpanded) Integer.MAX_VALUE else 3
+            layoutActions.visibility = if (isExpanded) View.VISIBLE else View.GONE
 
             val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
             txtTime.text = timeFormat.format(Date(entry.timestamp))
@@ -105,11 +132,20 @@ class JournalAdapter : ListAdapter<JournalListItem, RecyclerView.ViewHolder>(Jou
                 }
                 notifyItemChanged(bindingAdapterPosition, PAYLOAD_EXPAND_CHANGE)
             }
+
+            btnEdit.setOnClickListener {
+                currentEntry?.let { onEditClick?.invoke(it) }
+            }
+
+            btnDelete.setOnClickListener {
+                currentEntry?.let { onDeleteClick?.invoke(it) }
+            }
         }
 
         fun updateExpansion(entryId: String) {
             val isExpanded = expandedEntryId == entryId
             txtPreview.maxLines = if (isExpanded) Integer.MAX_VALUE else 3
+            layoutActions.visibility = if (isExpanded) View.VISIBLE else View.GONE
         }
     }
 

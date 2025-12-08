@@ -26,6 +26,8 @@ class RecommendationsFragment : Fragment() {
     private var currentJournalId: String? = null
     private var isWellnessExpanded = false
     private var currentYoutubeUrl: String? = null
+    private var currentEmotion: String = ""
+    private var currentSentiment: String = ""
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -64,26 +66,9 @@ class RecommendationsFragment : Fragment() {
                 if (url.isNotEmpty()) {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    // Use chooser to ensure it opens externally
                     startActivity(Intent.createChooser(intent, "Open with"))
                 }
             }
-        }
-
-        // Setup SwipeRefreshLayout
-        binding.swipeRefresh.setColorSchemeResources(
-            R.color.accent_orange,
-            R.color.accent_red,
-            R.color.accent_purple
-        )
-        binding.swipeRefresh.setOnRefreshListener {
-            // Force refresh - bypass cache
-            loadRecommendations(forceRefresh = true)
-        }
-
-        // Only enable pull-to-refresh when scrolled to the top
-        binding.scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
-            binding.swipeRefresh.isEnabled = scrollY == 0
         }
 
         // Load recommendations (use cache if valid)
@@ -104,8 +89,7 @@ class RecommendationsFragment : Fragment() {
             onSuccess = { entries ->
                 if (entries.isEmpty()) {
                     showEmptyState()
-                    binding.swipeRefresh.isRefreshing = false
-                    return@loadJournalEntries
+                                        return@loadJournalEntries
                 }
 
                 // Get most recent entry
@@ -117,8 +101,7 @@ class RecommendationsFragment : Fragment() {
                     // Use cached data
                     Log.d(TAG, "Using cached recommendations")
                     displayCachedData()
-                    binding.swipeRefresh.isRefreshing = false
-                } else {
+                                    } else {
                     // Fetch fresh recommendations
                     Log.d(TAG, "Fetching fresh recommendations")
                     processJournalEntry(mostRecent.id, mostRecent.text)
@@ -127,18 +110,22 @@ class RecommendationsFragment : Fragment() {
             onFailure = { error ->
                 Log.e(TAG, "Failed to load journal entries: $error")
                 showEmptyState()
-                binding.swipeRefresh.isRefreshing = false
-            }
+                            }
         )
     }
 
     private fun displayCachedData() {
         activity?.runOnUiThread {
+            // Load cached emotion data for generating friendly messages
+            currentEmotion = RecommendationsCache.getEmotion() ?: ""
+            currentSentiment = RecommendationsCache.getSentiment() ?: ""
+
             // Display cached wellness
             val wellnessTitle = RecommendationsCache.getWellnessTitle()
             val wellnessDescription = RecommendationsCache.getWellnessDescription()
             val wellnessDetailedExplanation = RecommendationsCache.getWellnessDetailedExplanation()
             val wellnessYoutubeUrl = RecommendationsCache.getWellnessYoutubeUrl()
+            val wellnessReasoning = RecommendationsCache.getWellnessReasoning()
 
             binding.progressWellness.visibility = View.GONE
             if (!wellnessTitle.isNullOrEmpty()) {
@@ -146,7 +133,8 @@ class RecommendationsFragment : Fragment() {
                     title = wellnessTitle,
                     description = wellnessDescription ?: "",
                     detailedExplanation = wellnessDetailedExplanation,
-                    youtubeUrl = wellnessYoutubeUrl
+                    youtubeUrl = wellnessYoutubeUrl,
+                    reasoning = wellnessReasoning
                 )
             } else {
                 binding.txtWellnessTitle.text = getString(R.string.no_recommendations)
@@ -154,14 +142,17 @@ class RecommendationsFragment : Fragment() {
 
             // Display cached songs
             val cachedSongs = RecommendationsCache.getSongs()
+            val songsReasoning = RecommendationsCache.getSongsReasoning()
             binding.layoutSongsLoading.visibility = View.GONE
 
             if (cachedSongs != null && cachedSongs.isNotEmpty()) {
                 binding.recyclerSongs.visibility = View.VISIBLE
                 binding.txtMusicHeader.visibility = View.VISIBLE
                 songAdapter.updateSongs(cachedSongs)
+                updateMusicReasoning(songsReasoning)
             } else {
                 binding.txtMusicHeader.visibility = View.GONE
+                binding.txtMusicReasoning.visibility = View.GONE
             }
         }
     }
@@ -175,9 +166,15 @@ class RecommendationsFragment : Fragment() {
 
                 if (emotionResult == null || sentimentResult == null) {
                     showError()
-                    binding.swipeRefresh.isRefreshing = false
-                    return@launch
+                                        return@launch
                 }
+
+                // Store emotion and sentiment for generating friendly messages
+                currentEmotion = emotionResult.emotion.lowercase()
+                currentSentiment = sentimentResult.sentiment.lowercase()
+
+                // Cache emotion data for later use
+                RecommendationsCache.saveEmotionData(currentEmotion, currentSentiment)
 
                 // Create emotion data for recommendation engine
                 val emotionData = RecommendationEngine.createEmotionData(
@@ -194,8 +191,7 @@ class RecommendationsFragment : Fragment() {
             } catch (e: Exception) {
                 Log.e(TAG, "Error processing journal entry", e)
                 showError()
-                binding.swipeRefresh.isRefreshing = false
-            }
+                            }
         }
     }
 
@@ -209,16 +205,17 @@ class RecommendationsFragment : Fragment() {
 
             activity?.runOnUiThread {
                 binding.progressWellness.visibility = View.GONE
-                binding.swipeRefresh.isRefreshing = false
-
+                
                 if (wellness != null && wellness.techniques.isNotEmpty()) {
                     val technique = wellness.techniques.first()
+                    val reasoning = wellness.reasoning
 
                     updateWellnessUI(
                         title = technique.name,
                         description = technique.description,
                         detailedExplanation = technique.detailedExplanation,
-                        youtubeUrl = technique.youtubeUrl
+                        youtubeUrl = technique.youtubeUrl,
+                        reasoning = reasoning
                     )
 
                     // Cache the wellness recommendation with new fields
@@ -227,7 +224,8 @@ class RecommendationsFragment : Fragment() {
                         technique.name,
                         technique.description,
                         technique.detailedExplanation,
-                        technique.youtubeUrl
+                        technique.youtubeUrl,
+                        reasoning
                     )
                 } else {
                     binding.txtWellnessTitle.text = getString(R.string.no_recommendations)
@@ -238,8 +236,7 @@ class RecommendationsFragment : Fragment() {
             activity?.runOnUiThread {
                 binding.progressWellness.visibility = View.GONE
                 binding.txtWellnessTitle.text = getString(R.string.no_recommendations)
-                binding.swipeRefresh.isRefreshing = false
-            }
+                            }
         }
     }
 
@@ -255,8 +252,7 @@ class RecommendationsFragment : Fragment() {
                 activity?.runOnUiThread {
                     binding.layoutSongsLoading.visibility = View.GONE
                     binding.txtMusicHeader.visibility = View.GONE
-                    binding.swipeRefresh.isRefreshing = false
-                }
+                                    }
                 return
             }
 
@@ -269,19 +265,22 @@ class RecommendationsFragment : Fragment() {
                 }
             }
 
+            val reasoning = songRecommendation.reasoning
+
             activity?.runOnUiThread {
                 binding.layoutSongsLoading.visibility = View.GONE
-                binding.swipeRefresh.isRefreshing = false
-
+                
                 if (spotifyTracks.isNotEmpty()) {
                     binding.recyclerSongs.visibility = View.VISIBLE
                     binding.txtMusicHeader.visibility = View.VISIBLE
                     songAdapter.updateSongs(spotifyTracks)
+                    updateMusicReasoning(reasoning)
 
-                    // Cache the songs
-                    RecommendationsCache.saveSongs(spotifyTracks)
+                    // Cache the songs with reasoning
+                    RecommendationsCache.saveSongs(spotifyTracks, reasoning)
                 } else {
                     binding.txtMusicHeader.visibility = View.GONE
+                    binding.txtMusicReasoning.visibility = View.GONE
                 }
             }
         } catch (e: Exception) {
@@ -289,8 +288,7 @@ class RecommendationsFragment : Fragment() {
             activity?.runOnUiThread {
                 binding.layoutSongsLoading.visibility = View.GONE
                 binding.txtMusicHeader.visibility = View.GONE
-                binding.swipeRefresh.isRefreshing = false
-            }
+                            }
         }
     }
 
@@ -312,6 +310,9 @@ class RecommendationsFragment : Fragment() {
         }
     }
 
+    private var currentWellnessReasoning: String? = null
+    private var currentMusicReasoning: String? = null
+
     private fun toggleWellnessExpansion() {
         isWellnessExpanded = !isWellnessExpanded
 
@@ -320,7 +321,7 @@ class RecommendationsFragment : Fragment() {
             binding.txtTapToExpand.text = "Tap to collapse"
         } else {
             binding.layoutWellnessDetails.visibility = View.GONE
-            binding.txtTapToExpand.text = "Tap for more details"
+            binding.txtTapToExpand.text = "Tap to learn more"
         }
     }
 
@@ -328,11 +329,18 @@ class RecommendationsFragment : Fragment() {
         title: String,
         description: String,
         detailedExplanation: String?,
-        youtubeUrl: String?
+        youtubeUrl: String?,
+        reasoning: String? = null
     ) {
         binding.txtWellnessTitle.text = title
         binding.txtWellnessDescription.text = description
         binding.txtWellnessDescription.visibility = View.VISIBLE
+
+        // Generate and show friendly reasoning immediately (not on expand)
+        val friendlyReasoning = generateFriendlyWellnessReasoning(title)
+        currentWellnessReasoning = friendlyReasoning
+        binding.txtWellnessReasoning.text = friendlyReasoning
+        binding.txtWellnessReasoning.visibility = View.VISIBLE
 
         // Set up detailed explanation
         if (!detailedExplanation.isNullOrEmpty()) {
@@ -353,5 +361,53 @@ class RecommendationsFragment : Fragment() {
         // Reset expansion state
         isWellnessExpanded = false
         binding.layoutWellnessDetails.visibility = View.GONE
+    }
+
+    private fun updateMusicReasoning(reasoning: String?) {
+        currentMusicReasoning = reasoning
+        // Show friendly music reasoning
+        val friendlyReasoning = generateFriendlyMusicReasoning()
+        binding.txtMusicReasoning.text = friendlyReasoning
+        binding.txtMusicReasoning.visibility = View.VISIBLE
+    }
+
+    /**
+     * Generate a sweet, concise 1-2 line message for why the wellness tip was chosen
+     */
+    private fun generateFriendlyWellnessReasoning(techniqueName: String): String {
+        return when {
+            currentEmotion.contains("sad") || currentSentiment.contains("negative") ->
+                "We picked this to help lift your spirits and bring some calm to your day."
+            currentEmotion.contains("anxious") || currentEmotion.contains("fear") ->
+                "This technique can help ease your mind and find your center."
+            currentEmotion.contains("angry") || currentEmotion.contains("anger") ->
+                "We thought this might help you release some tension and feel more at peace."
+            currentEmotion.contains("joy") || currentSentiment.contains("positive") ->
+                "A great way to maintain your positive energy and keep the good vibes flowing!"
+            currentEmotion.contains("surprise") ->
+                "This can help you process your thoughts and stay grounded."
+            else ->
+                "We think this could be a nice moment of self-care for you today."
+        }
+    }
+
+    /**
+     * Generate a sweet, concise 1-2 line message for why these songs were chosen
+     */
+    private fun generateFriendlyMusicReasoning(): String {
+        return when {
+            currentEmotion.contains("sad") || currentSentiment.contains("negative") ->
+                "We hope these songs bring you comfort and remind you that brighter days are ahead."
+            currentEmotion.contains("anxious") || currentEmotion.contains("fear") ->
+                "These calming tunes might help soothe your mind and ease some of that tension."
+            currentEmotion.contains("angry") || currentEmotion.contains("anger") ->
+                "Sometimes music helps us release what we're holding onto. We hope these help."
+            currentEmotion.contains("joy") || currentSentiment.contains("positive") ->
+                "Keep the good vibes going! These songs match your upbeat energy."
+            currentEmotion.contains("surprise") ->
+                "A mix of tunes to help you process and enjoy the moment."
+            else ->
+                "We curated these songs just for you. Hope you enjoy!"
+        }
     }
 }

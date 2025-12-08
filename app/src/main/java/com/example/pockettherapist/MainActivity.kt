@@ -95,4 +95,8 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNav.itemIconTintList = colorStateList
         binding.bottomNav.itemTextColor = colorStateList
     }
+
+    fun navigateToTab(itemId: Int) {
+        binding.bottomNav.selectedItemId = itemId
+    }
 }

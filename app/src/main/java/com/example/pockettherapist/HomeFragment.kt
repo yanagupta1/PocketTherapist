@@ -1,13 +1,9 @@
 package com.example.pockettherapist
 
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.Manifest
 import android.animation.AnimatorSet
-import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.ItemTouchHelper
 import android.animation.ObjectAnimator
+import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -17,12 +13,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
+import android.widget.Button
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.pockettherapist.databinding.FragmentHomeBinding
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -33,6 +34,7 @@ class HomeFragment : Fragment() {
 
     private lateinit var binding: FragmentHomeBinding
     private lateinit var adapter: JournalAdapter
+    private lateinit var recommendationEngine: RecommendationEngine
     private var audioHelper: AudioTextHelper? = null
 
     private val micPermission = Manifest.permission.RECORD_AUDIO
@@ -40,6 +42,8 @@ class HomeFragment : Fragment() {
 
     private var journalEntries = mutableListOf<JournalEntry>()
     private var isOverlayVisible = false
+    private var editingEntry: JournalEntry? = null  // Track if we're editing an existing entry
+    private var selectedMood: String = ""  // Track selected mood emoji
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -62,13 +66,50 @@ class HomeFragment : Fragment() {
         }
 
 
+        recommendationEngine = RecommendationEngine(requireContext())
         checkMicPermission()
         setupAudioHelper()
         setupRecyclerView()
-        addSwipeToDelete()
         setupFab()
         setupOverlay()
+        setupMoodSelector()
         loadJournalEntries()
+    }
+
+    private fun setupMoodSelector() {
+        val moods = listOf(
+            binding.btnMoodHappy to "😊",
+            binding.btnMoodSad to "😢",
+            binding.btnMoodAngry to "😤",
+            binding.btnMoodAnxious to "😰",
+            binding.btnMoodCalm to "😌"
+        )
+
+        moods.forEach { (button, emoji) ->
+            button.setOnClickListener {
+                // Toggle selection
+                if (selectedMood == emoji) {
+                    selectedMood = ""
+                    button.alpha = 1.0f
+                } else {
+                    selectedMood = emoji
+                    // Reset all alphas
+                    moods.forEach { (btn, _) -> btn.alpha = 0.4f }
+                    button.alpha = 1.0f
+                }
+            }
+        }
+    }
+
+    private fun resetMoodSelector() {
+        selectedMood = ""
+        listOf(
+            binding.btnMoodHappy,
+            binding.btnMoodSad,
+            binding.btnMoodAngry,
+            binding.btnMoodAnxious,
+            binding.btnMoodCalm
+        ).forEach { it.alpha = 1.0f }
     }
 
     private fun checkMicPermission() {
@@ -99,7 +140,10 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        adapter = JournalAdapter()
+        adapter = JournalAdapter(
+            onEditClick = { entry -> showEditDialog(entry) },
+            onDeleteClick = { entry -> showDeleteConfirmation(entry) }
+        )
         binding.journalRecycler.adapter = adapter
         binding.journalRecycler.layoutManager = LinearLayoutManager(requireContext())
     }
@@ -208,7 +252,9 @@ class HomeFragment : Fragment() {
     }
 
     private fun hideOverlayAndSave() {
+        val title = binding.etEntryTitle.text.toString().trim()
         val text = binding.etNewEntry.text.toString().trim()
+        val mood = selectedMood
 
         // Hide keyboard
         val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -218,15 +264,27 @@ class HomeFragment : Fragment() {
         isOverlayVisible = false
         binding.dimOverlay.visibility = View.GONE
         binding.entryOverlay.visibility = View.GONE
+        binding.etEntryTitle.setText("")
         binding.etNewEntry.setText("")
+        resetMoodSelector()
 
         // Animate mic back to plus
         animateFabIcon(R.drawable.ic_plus)
 
         // Save if there's text
         if (text.isNotEmpty()) {
-            saveJournalEntry(text)
+            val entryBeingEdited = editingEntry
+            if (entryBeingEdited != null) {
+                // Update existing entry
+                updateJournalEntry(entryBeingEdited.id, title, text, mood)
+            } else {
+                // Create new entry
+                saveJournalEntry(title, text, mood)
+            }
         }
+
+        // Clear editing state
+        editingEntry = null
     }
 
     private fun loadJournalEntries() {
@@ -242,18 +300,94 @@ class HomeFragment : Fragment() {
         )
     }
 
-    private fun saveJournalEntry(text: String) {
+    private fun saveJournalEntry(title: String, text: String, mood: String) {
         UserStore.saveJournalEntry(
+            title = title,
             text = text,
+            mood = mood,
             onSuccess = { entry ->
                 journalEntries.add(0, entry)
                 updateList()
-                Toast.makeText(requireContext(), "Entry saved", Toast.LENGTH_SHORT).show()
+
+                // Check for crisis language first - this takes priority
+                if (CrisisDetector.containsCrisisLanguage(text)) {
+                    CrisisDetector.showCrisisAlert(requireContext())
+                } else {
+                    // Show AI companion response dialog
+                    showCompanionResponseDialog(text, mood)
+                }
             },
             onFailure = { error ->
                 Toast.makeText(requireContext(), "Failed to save: $error", Toast.LENGTH_SHORT).show()
             }
         )
+    }
+
+    private fun showCompanionResponseDialog(journalText: String, mood: String) {
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_companion_response, null)
+
+        val txtResponse = dialogView.findViewById<TextView>(R.id.txtCompanionResponse)
+        val progressBar = dialogView.findViewById<ProgressBar>(R.id.progressCompanion)
+        val txtPrompt = dialogView.findViewById<TextView>(R.id.txtRecommendationsPrompt)
+        val btnRecommendations = dialogView.findViewById<Button>(R.id.btnViewRecommendations)
+        val btnDismiss = dialogView.findViewById<Button>(R.id.btnDismissCompanion)
+
+        val dialog = AlertDialog.Builder(requireContext(), R.style.Theme_PocketTherapist_AlertDialog)
+            .setView(dialogView)
+            .setCancelable(false)  // Prevent dismissing while loading
+            .create()
+
+        // Hide dismiss button while loading
+        btnDismiss.visibility = View.GONE
+
+        // Fetch AI response
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val response = recommendationEngine.getCompanionResponse(journalText, mood)
+
+                progressBar.visibility = View.GONE
+                btnDismiss.visibility = View.VISIBLE
+                dialog.setCancelable(true)  // Allow dismissing after loaded
+
+                if (response != null) {
+                    txtResponse.text = response
+                    txtPrompt.visibility = View.VISIBLE
+                    btnRecommendations.visibility = View.VISIBLE
+                } else {
+                    txtResponse.text = "Entry saved successfully!"
+                    txtPrompt.visibility = View.VISIBLE
+                    btnRecommendations.visibility = View.VISIBLE
+                }
+            } catch (e: Exception) {
+                progressBar.visibility = View.GONE
+                btnDismiss.visibility = View.VISIBLE
+                dialog.setCancelable(true)
+                txtResponse.text = "Entry saved successfully!"
+                txtPrompt.visibility = View.VISIBLE
+                btnRecommendations.visibility = View.VISIBLE
+            }
+        }
+
+        btnRecommendations.setOnClickListener {
+            dialog.dismiss()
+            // Navigate to recommendations tab
+            navigateToRecommendations()
+        }
+
+        btnDismiss.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    private fun navigateToRecommendations() {
+        // Find the MainActivity and switch to recommendations tab
+        val activity = requireActivity()
+        if (activity is MainActivity) {
+            activity.navigateToTab(R.id.nav_recommendations)
+        }
     }
 
     private fun updateList() {
@@ -315,74 +449,74 @@ class HomeFragment : Fragment() {
         audioHelper = null
     }
 
-    private fun addSwipeToDelete() {
-        val swipeHandler = object : ItemTouchHelper.SimpleCallback(0,
-            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+    private fun showEditDialog(entry: JournalEntry) {
+        // Set editing state and open the overlay with existing data
+        editingEntry = entry
+        showOverlay()
+        binding.etEntryTitle.setText(entry.title)
+        binding.etNewEntry.setText(entry.text)
+        binding.etNewEntry.setSelection(entry.text.length)
 
-            override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ): Boolean = false
-
-            override fun onChildDraw(
-                c: Canvas,
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                dX: Float,
-                dY: Float,
-                actionState: Int,
-                isCurrentlyActive: Boolean
-            ) {
-                val itemView = viewHolder.itemView
-                val background = ColorDrawable(Color.RED)
-                val icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_delete)
-
-                val iconMargin = (itemView.height - icon!!.intrinsicHeight) / 2
-                val iconTop = itemView.top + (itemView.height - icon.intrinsicHeight) / 2
-                val iconBottom = iconTop + icon.intrinsicHeight
-
-                if (dX > 0) {   // Right swipe
-                    background.setBounds(itemView.left, itemView.top, itemView.left + dX.toInt(), itemView.bottom)
-                    background.draw(c)
-
-                    val iconLeft = itemView.left + iconMargin
-                    val iconRight = iconLeft + icon.intrinsicWidth
-                    icon.setBounds(iconLeft, iconTop, iconRight, iconBottom)
-                    icon.draw(c)
-                } else if (dX < 0) { // Left swipe
-                    background.setBounds(itemView.right + dX.toInt(), itemView.top, itemView.right, itemView.bottom)
-                    background.draw(c)
-
-                    val iconRight = itemView.right - iconMargin
-                    val iconLeft = iconRight - icon.intrinsicWidth
-                    icon.setBounds(iconLeft, iconTop, iconRight, iconBottom)
-                    icon.draw(c)
-                }
-
-                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
-            }
-
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                val position = viewHolder.adapterPosition
-                val item = adapter.currentList[position]
-
-                if (item is JournalListItem.Entry) {
-                    journalEntries.remove(item.entry)
-                    updateList()
-
-                    UserStore.deleteJournalEntry(item.entry.id,
-                        onSuccess = {},
-                        onFailure = {
-                            Toast.makeText(requireContext(), "Delete failed", Toast.LENGTH_SHORT).show()
-                        })
-                }
-            }
+        // Set mood if available
+        if (entry.mood.isNotEmpty()) {
+            selectedMood = entry.mood
+            val moods = mapOf(
+                "😊" to binding.btnMoodHappy,
+                "😢" to binding.btnMoodSad,
+                "😤" to binding.btnMoodAngry,
+                "😰" to binding.btnMoodAnxious,
+                "😌" to binding.btnMoodCalm
+            )
+            // Dim all, highlight selected
+            moods.values.forEach { it.alpha = 0.4f }
+            moods[entry.mood]?.alpha = 1.0f
         }
-
-        ItemTouchHelper(swipeHandler).attachToRecyclerView(binding.journalRecycler)
     }
 
+    private fun updateJournalEntry(entryId: String, newTitle: String, newText: String, newMood: String) {
+        UserStore.updateJournalEntry(
+            entryId = entryId,
+            newTitle = newTitle,
+            newText = newText,
+            newMood = newMood,
+            onSuccess = { updatedEntry ->
+                // Update local list
+                val index = journalEntries.indexOfFirst { it.id == entryId }
+                if (index != -1) {
+                    journalEntries[index] = updatedEntry
+                    updateList()
+                }
+                Toast.makeText(requireContext(), "Entry updated", Toast.LENGTH_SHORT).show()
 
+                // Check for crisis language after update
+                if (CrisisDetector.containsCrisisLanguage(newText)) {
+                    CrisisDetector.showCrisisAlert(requireContext())
+                }
+            },
+            onFailure = { error ->
+                Toast.makeText(requireContext(), "Failed to update: $error", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
 
+    private fun showDeleteConfirmation(entry: JournalEntry) {
+        AlertDialog.Builder(requireContext(), R.style.Theme_PocketTherapist_AlertDialog)
+            .setTitle("Delete Entry")
+            .setMessage("Are you sure you want to delete this journal entry? This cannot be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                UserStore.deleteJournalEntry(
+                    entryId = entry.id,
+                    onSuccess = {
+                        journalEntries.removeAll { it.id == entry.id }
+                        updateList()
+                        Toast.makeText(requireContext(), "Entry deleted", Toast.LENGTH_SHORT).show()
+                    },
+                    onFailure = { error ->
+                        Toast.makeText(requireContext(), "Failed to delete: $error", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
 }
