@@ -1,14 +1,12 @@
 package com.example.pockettherapist
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.location.Geocoder
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
@@ -26,7 +24,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.pockettherapist.adapters.AmenityAdapter
 import com.example.pockettherapist.adapters.TMEventAdapter
 import com.example.pockettherapist.databinding.FragmentActivitiesBinding
-import com.google.android.gms.location.LocationServices
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.async
@@ -46,6 +43,12 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
     private var currentSteps = 0
     private var stepGoal = DEFAULT_STEP_GOAL
 
+    // Activity tracker with Kalman filter sensor fusion
+    private var activityTracker: ActivityTracker? = null
+    private var lastCalorieUpdateTime = 0L
+    private var calorieGoal = DEFAULT_CALORIE_GOAL
+    private var activityGoal = DEFAULT_ACTIVITY_GOAL
+
     // Cached data
     private var cachedAmenities: List<RecommendationEngine.ResourceDetail>? = null
     private var cachedEvents: List<RecommendationEngine.EventDetail>? = null
@@ -61,17 +64,13 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         }
     }
 
-    private val locationPermissionLauncher = registerForActivityResult(
+    private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            loadUserLocationAndFetch(forceRefresh = false)
-        } else {
-            hideAllLoading()
-            binding.layoutAmenitiesEmpty.visibility = View.VISIBLE
-            binding.txtEventsEmpty.visibility = View.VISIBLE
-            Toast.makeText(requireContext(), "Location permission required", Toast.LENGTH_SHORT).show()
+            startBackgroundTracking()
         }
+        // Silently continue even if denied - foreground tracking still works
     }
 
     companion object {
@@ -80,6 +79,12 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         private const val KEY_INITIAL_STEPS = "initial_steps"
         private const val KEY_LAST_SAVE_DATE = "last_save_date"
         private const val DEFAULT_STEP_GOAL = 7000
+
+        private const val KEY_CALORIE_GOAL = "calorie_goal"
+        private const val DEFAULT_CALORIE_GOAL = 500
+
+        private const val KEY_ACTIVITY_GOAL = "activity_goal"
+        private const val DEFAULT_ACTIVITY_GOAL = 30 // 30 minutes of moderate activity
 
         private const val CACHE_PREFS_NAME = "activities_cache"
         private const val KEY_CACHED_AMENITIES = "cached_amenities"
@@ -117,8 +122,267 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         updateStepUI()
         checkActivityPermissionAndSetupSensor()
 
+        // Activity tracker setup (Kalman filter sensor fusion)
+        setupActivityTracker()
+
         // Load from cache first
         loadCachedData()
+    }
+
+    // -------------------------------------------------
+    // ACTIVITY TRACKER (Kalman Filter Sensor Fusion)
+    // -------------------------------------------------
+
+    private fun setupActivityTracker() {
+        activityTracker = ActivityTracker(requireContext())
+
+        // Set user profile if available (for calorie calculation)
+        // Default values used if not set
+        activityTracker?.setUserProfile(
+            weightKg = 70f,
+            age = 30,
+            isMale = true
+        )
+
+        activityTracker?.onActivityUpdate = { data ->
+            activity?.runOnUiThread {
+                updateActivityUI(data)
+            }
+        }
+
+        lastCalorieUpdateTime = System.currentTimeMillis()
+
+        // Load calorie goal
+        loadCalorieGoal()
+
+        // Setup calorie goal edit button
+        setupEditCalorieGoalButton()
+
+        // Load activity goal
+        loadActivityGoal()
+
+        // Setup activity goal edit button
+        setupEditActivityGoalButton()
+
+        // Auto-start background tracking
+        autoStartBackgroundTracking()
+
+        // Load daily data
+        loadDailyData()
+    }
+
+    private fun autoStartBackgroundTracking() {
+        // Always start background tracking automatically
+        if (!ActivityTrackingService.isRunning(requireContext())) {
+            checkNotificationPermissionAndStart()
+        }
+    }
+
+    private fun loadCalorieGoal() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        calorieGoal = prefs.getInt(KEY_CALORIE_GOAL, DEFAULT_CALORIE_GOAL)
+        updateCalorieGoalUI()
+    }
+
+    private fun saveCalorieGoal(goal: Int) {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_CALORIE_GOAL, goal).apply()
+    }
+
+    private fun updateCalorieGoalUI() {
+        binding.txtCalorieGoal.text = "/ $calorieGoal cal"
+    }
+
+    private fun setupEditCalorieGoalButton() {
+        binding.btnEditCalorieGoal.setOnClickListener {
+            showEditCalorieGoalDialog()
+        }
+    }
+
+    private fun showEditCalorieGoalDialog() {
+        val editText = EditText(requireContext()).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            hint = "Enter calorie goal"
+            setText(calorieGoal.toString())
+            selectAll()
+        }
+
+        val padding = (24 * resources.displayMetrics.density).toInt()
+        editText.setPadding(padding, padding, padding, padding)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Set Daily Calorie Goal")
+            .setView(editText)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val newGoal = editText.text.toString().toIntOrNull()
+                if (newGoal != null && newGoal > 0) {
+                    calorieGoal = newGoal
+                    saveCalorieGoal(newGoal)
+                    updateCalorieGoalUI()
+                    loadDailyData() // Refresh to update progress
+                } else {
+                    Toast.makeText(requireContext(), "Please enter a valid number", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    // -------------------------------------------------
+    // ACTIVITY GOAL (Daily cumulative goal)
+    // -------------------------------------------------
+
+    private fun loadActivityGoal() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        activityGoal = prefs.getInt(KEY_ACTIVITY_GOAL, DEFAULT_ACTIVITY_GOAL)
+    }
+
+    private fun saveActivityGoal(goal: Int) {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_ACTIVITY_GOAL, goal).apply()
+    }
+
+    private fun setupEditActivityGoalButton() {
+        binding.btnEditActivityGoal.setOnClickListener {
+            showEditActivityGoalDialog()
+        }
+    }
+
+    private fun showEditActivityGoalDialog() {
+        val editText = EditText(requireContext()).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            hint = "Enter activity goal (minutes)"
+            setText(activityGoal.toString())
+            selectAll()
+        }
+
+        val padding = (24 * resources.displayMetrics.density).toInt()
+        editText.setPadding(padding, padding, padding, padding)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Set Daily Activity Goal")
+            .setMessage("Recommended: ${DailyActivityStore.getRecommendedActivityGoal(30)} minutes of moderate activity per day")
+            .setView(editText)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val newGoal = editText.text.toString().toIntOrNull()
+                if (newGoal != null && newGoal > 0) {
+                    activityGoal = newGoal
+                    saveActivityGoal(newGoal)
+                    loadDailyData() // Refresh to update progress
+                } else {
+                    Toast.makeText(requireContext(), "Please enter a valid number", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun checkNotificationPermissionAndStart() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    startBackgroundTracking()
+                }
+                else -> {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        } else {
+            startBackgroundTracking()
+        }
+    }
+
+    private fun startBackgroundTracking() {
+        ActivityTrackingService.start(requireContext())
+    }
+
+    private fun loadDailyData() {
+        val dailyData = DailyActivityStore.getTodayData(requireContext())
+
+        // Only show actively tracked calories
+        val displayCalories = dailyData.totalCalories
+
+        // Update calorie display
+        binding.txtCaloriesBurned.text = String.format("%.0f", displayCalories)
+
+        // Update calorie progress bar
+        val caloriePercent = if (calorieGoal > 0) {
+            ((displayCalories / calorieGoal) * 100).coerceAtMost(100f).toInt()
+        } else {
+            0
+        }
+        binding.progressCalories.progress = caloriePercent
+        binding.txtCaloriePercent.text = "$caloriePercent% of daily goal"
+
+        // Update activity progress (cumulative daily goal)
+        updateActivityProgress(dailyData)
+
+        // If we have steps from daily store, use them
+        if (dailyData.totalSteps > 0) {
+            currentSteps = dailyData.totalSteps
+            updateStepUI()
+        }
+    }
+
+    private fun updateActivityProgress(dailyData: DailyActivityStore.DailyActivityData) {
+        // Calculate activity score (equivalent moderate minutes)
+        val activityScore = dailyData.calculateActivityScore()
+
+        // Calculate percentage toward goal
+        val activityPercent = if (activityGoal > 0) {
+            ((activityScore / activityGoal) * 100).coerceAtMost(100f).toInt()
+        } else {
+            0
+        }
+
+        // Update UI
+        binding.txtActivityPercent.text = activityPercent.toString()
+        binding.progressActivity.progress = activityPercent
+
+        // Show active minutes vs goal
+        val activeMinutes = dailyData.getTotalActiveMinutes()
+        binding.txtActivityMinutes.text = "$activeMinutes / $activityGoal active minutes"
+    }
+
+    private fun updateActivityUI(data: ActivityTracker.ActivityData) {
+        // Record activity sample to daily store (only if there's actual activity)
+        val currentTime = System.currentTimeMillis()
+        val elapsedSeconds = (currentTime - lastCalorieUpdateTime) / 1000f
+
+        if (elapsedSeconds >= 1f) {
+            // Only record calories and activity when there's actual movement (not resting)
+            if (data.activityLevel > 0.1f) {
+                DailyActivityStore.recordActivitySample(
+                    context = requireContext(),
+                    activityLevel = data.activityLevel,
+                    activityState = data.activityState,
+                    caloriesPerMinute = data.caloriesPerMinute,
+                    durationSeconds = elapsedSeconds
+                )
+            }
+            lastCalorieUpdateTime = currentTime
+
+            // Update displays from daily store
+            val dailyData = DailyActivityStore.getTodayData(requireContext())
+
+            // Update calorie display (active calories only)
+            binding.txtCaloriesBurned.text = String.format("%.0f", dailyData.totalCalories)
+
+            // Update calorie progress
+            val caloriePercent = if (calorieGoal > 0) {
+                ((dailyData.totalCalories / calorieGoal) * 100).coerceAtMost(100f).toInt()
+            } else {
+                0
+            }
+            binding.progressCalories.progress = caloriePercent
+            binding.txtCaloriePercent.text = "$caloriePercent% of daily goal"
+
+            // Update activity progress (cumulative daily goal)
+            updateActivityProgress(dailyData)
+        }
     }
 
     // -------------------------------------------------
@@ -213,23 +477,27 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
     // -------------------------------------------------
 
     private fun refreshData() {
-        checkLocationPermissionAndLoad(forceRefresh = true)
+        loadWithProfileLocation(forceRefresh = true)
     }
 
     private fun checkLocationPermissionAndLoad(forceRefresh: Boolean = false) {
-        val permission = Manifest.permission.ACCESS_FINE_LOCATION
-        when {
-            ContextCompat.checkSelfPermission(requireContext(), permission) == PackageManager.PERMISSION_GRANTED -> {
-                loadUserLocationAndFetch(forceRefresh)
-            }
-            else -> {
-                locationPermissionLauncher.launch(permission)
-            }
+        // Use profile location instead of GPS
+        loadWithProfileLocation(forceRefresh)
+    }
+
+    /**
+     * Gets the user's location from their profile, defaulting to Madison, WI if not set
+     */
+    private fun getProfileLocation(): String {
+        val profileLocation = UserStore.location
+        return if (!profileLocation.isNullOrBlank()) {
+            profileLocation
+        } else {
+            "Madison, WI" // Default location
         }
     }
 
-    @SuppressLint("MissingPermission")
-    private fun loadUserLocationAndFetch(forceRefresh: Boolean) {
+    private fun loadWithProfileLocation(forceRefresh: Boolean = false) {
         if (forceRefresh) {
             binding.swipeRefresh.isRefreshing = true
         } else {
@@ -246,25 +514,13 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
             }
         }
 
-        val fused = LocationServices.getFusedLocationProviderClient(requireActivity())
-
-        fused.lastLocation
-            .addOnSuccessListener { loc ->
-                if (loc != null) {
-                    loadData(loc.latitude, loc.longitude)
-                } else {
-                    loadData(43.0731, -89.4012) // Fallback
-                }
-            }
-            .addOnFailureListener {
-                loadData(43.0731, -89.4012) // Fallback
-            }
+        val locationString = getProfileLocation()
+        loadDataWithLocation(locationString)
     }
 
-    private fun loadData(lat: Double, lng: Double) {
+    private fun loadDataWithLocation(locationString: String) {
         lifecycleScope.launch {
             try {
-                val locationString = getLocationString(lat, lng)
 
                 val emotionData = RecommendationEngine.createEmotionData(
                     emotion = "neutral",
@@ -331,32 +587,6 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
 
                 android.util.Log.e("ActivitiesFragment", "Error loading data", e)
             }
-        }
-    }
-
-    private fun getLocationString(lat: Double, lng: Double): String {
-        return try {
-            val geocoder = Geocoder(requireContext(), Locale.getDefault())
-            val addresses = geocoder.getFromLocation(lat, lng, 1)
-
-            if (addresses?.isNotEmpty() == true) {
-                val address = addresses[0]
-                val city = address.locality ?: address.subAdminArea ?: ""
-                val state = address.adminArea ?: ""
-                val country = address.countryName ?: ""
-
-                when {
-                    city.isNotEmpty() && state.isNotEmpty() -> "$city, $state"
-                    city.isNotEmpty() -> city
-                    state.isNotEmpty() -> state
-                    country.isNotEmpty() -> country
-                    else -> "latitude: $lat, longitude: $lng"
-                }
-            } else {
-                "latitude: $lat, longitude: $lng"
-            }
-        } catch (e: Exception) {
-            "latitude: $lat, longitude: $lng"
         }
     }
 
@@ -481,11 +711,25 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         stepSensor?.let {
             sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
         }
+        // Start activity tracker
+        activityTracker?.start()
+        lastCalorieUpdateTime = System.currentTimeMillis()
+
+        // Refresh daily data
+        loadDailyData()
     }
 
     override fun onPause() {
         super.onPause()
         sensorManager?.unregisterListener(this)
+        // Stop activity tracker
+        activityTracker?.stop()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        activityTracker?.stop()
+        activityTracker = null
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
