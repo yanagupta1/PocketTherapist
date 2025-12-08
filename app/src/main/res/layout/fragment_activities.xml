@@ -147,6 +147,264 @@
 
             </androidx.cardview.widget.CardView>
 
+            <!-- Activity Level Card -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardActivityLevel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/dark_card"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header row with label -->
+                    <TextView
+                        android:id="@+id/txtActivityLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Activity Level"
+                        android:textColor="@color/accent_purple"
+                        android:fontFamily="@font/poppins_semibold"
+                        android:textSize="12sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05" />
+
+                    <!-- Activity status row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/txtActivityState"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Sedentary"
+                            android:textColor="@color/text_light"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:textSize="24sp" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:layout_weight="1" />
+
+                        <!-- Activity indicator dots -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <View
+                                android:id="@+id/dotSedentary"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:layout_marginEnd="6dp"
+                                android:background="@drawable/activity_dot_active" />
+
+                            <View
+                                android:id="@+id/dotLight"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:layout_marginEnd="6dp"
+                                android:background="@drawable/activity_dot_inactive" />
+
+                            <View
+                                android:id="@+id/dotModerate"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:layout_marginEnd="6dp"
+                                android:background="@drawable/activity_dot_inactive" />
+
+                            <View
+                                android:id="@+id/dotVigorous"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:background="@drawable/activity_dot_inactive" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Activity level progress bar -->
+                    <ProgressBar
+                        android:id="@+id/progressActivity"
+                        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="12dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressTint="@color/accent_purple"
+                        android:progressBackgroundTint="@color/dark_gray" />
+
+                    <!-- Metrics row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:orientation="horizontal">
+
+                        <!-- Calories -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:id="@+id/txtCaloriesValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0.0"
+                                android:textColor="@color/text_light"
+                                android:fontFamily="@font/poppins_semibold"
+                                android:textSize="18sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="cal/min"
+                                android:textColor="@color/hint_color"
+                                android:fontFamily="@font/poppins_regular"
+                                android:textSize="11sp" />
+
+                        </LinearLayout>
+
+                        <!-- Divider -->
+                        <View
+                            android:layout_width="1dp"
+                            android:layout_height="match_parent"
+                            android:background="@color/dark_gray" />
+
+                        <!-- Movement -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:id="@+id/txtMovementValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0.0"
+                                android:textColor="@color/text_light"
+                                android:fontFamily="@font/poppins_semibold"
+                                android:textSize="18sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="movement"
+                                android:textColor="@color/hint_color"
+                                android:fontFamily="@font/poppins_regular"
+                                android:textSize="11sp" />
+
+                        </LinearLayout>
+
+                        <!-- Divider -->
+                        <View
+                            android:layout_width="1dp"
+                            android:layout_height="match_parent"
+                            android:background="@color/dark_gray" />
+
+                        <!-- Rotation -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:id="@+id/txtRotationValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0.0"
+                                android:textColor="@color/text_light"
+                                android:fontFamily="@font/poppins_semibold"
+                                android:textSize="18sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="rotation"
+                                android:textColor="@color/hint_color"
+                                android:fontFamily="@font/poppins_regular"
+                                android:textSize="11sp" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Session stats -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Session calories: "
+                            android:textColor="@color/hint_color"
+                            android:fontFamily="@font/poppins_regular"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/txtSessionCalories"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/accent_purple"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=" cal"
+                            android:textColor="@color/hint_color"
+                            android:fontFamily="@font/poppins_regular"
+                            android:textSize="12sp" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:layout_weight="1" />
+
+                        <!-- Context indicator -->
+                        <TextView
+                            android:id="@+id/txtContextIndicator"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Active"
+                            android:textColor="@color/hint_color"
+                            android:fontFamily="@font/poppins_regular"
+                            android:textSize="11sp"
+                            android:drawablePadding="4dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
             <!-- Events Section Header -->
             <TextView
                 android:id="@+id/txtEventsHeader"

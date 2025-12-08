@@ -1,14 +1,12 @@
 package com.example.pockettherapist
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.location.Geocoder
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
@@ -26,7 +24,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.pockettherapist.adapters.AmenityAdapter
 import com.example.pockettherapist.adapters.TMEventAdapter
 import com.example.pockettherapist.databinding.FragmentActivitiesBinding
-import com.google.android.gms.location.LocationServices
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.async
@@ -46,6 +43,11 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
     private var currentSteps = 0
     private var stepGoal = DEFAULT_STEP_GOAL
 
+    // Activity tracker with Kalman filter sensor fusion
+    private var activityTracker: ActivityTracker? = null
+    private var sessionCalories = 0f
+    private var lastCalorieUpdateTime = 0L
+
     // Cached data
     private var cachedAmenities: List<RecommendationEngine.ResourceDetail>? = null
     private var cachedEvents: List<RecommendationEngine.EventDetail>? = null
@@ -61,18 +63,6 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         }
     }
 
-    private val locationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            loadUserLocationAndFetch(forceRefresh = false)
-        } else {
-            hideAllLoading()
-            binding.layoutAmenitiesEmpty.visibility = View.VISIBLE
-            binding.txtEventsEmpty.visibility = View.VISIBLE
-            Toast.makeText(requireContext(), "Location permission required", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     companion object {
         private const val PREFS_NAME = "step_counter_prefs"
@@ -117,8 +107,82 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         updateStepUI()
         checkActivityPermissionAndSetupSensor()
 
+        // Activity tracker setup (Kalman filter sensor fusion)
+        setupActivityTracker()
+
         // Load from cache first
         loadCachedData()
+    }
+
+    // -------------------------------------------------
+    // ACTIVITY TRACKER (Kalman Filter Sensor Fusion)
+    // -------------------------------------------------
+
+    private fun setupActivityTracker() {
+        activityTracker = ActivityTracker(requireContext())
+
+        // Set user profile if available (for calorie calculation)
+        // Default values used if not set
+        activityTracker?.setUserProfile(
+            weightKg = 70f,
+            age = 30,
+            isMale = true
+        )
+
+        activityTracker?.onActivityUpdate = { data ->
+            activity?.runOnUiThread {
+                updateActivityUI(data)
+            }
+        }
+
+        sessionCalories = 0f
+        lastCalorieUpdateTime = System.currentTimeMillis()
+    }
+
+    private fun updateActivityUI(data: ActivityTracker.ActivityData) {
+        // Update activity state text
+        binding.txtActivityState.text = data.activityState.displayName
+
+        // Update progress bar (0-100%)
+        binding.progressActivity.progress = (data.activityLevel * 100).toInt()
+
+        // Update indicator dots
+        updateActivityDots(data.activityState)
+
+        // Update metrics
+        binding.txtCaloriesValue.text = String.format("%.1f", data.caloriesPerMinute)
+        binding.txtMovementValue.text = String.format("%.1f", data.movementIntensity)
+        binding.txtRotationValue.text = String.format("%.1f", data.rotationRate)
+
+        // Accumulate session calories
+        val currentTime = System.currentTimeMillis()
+        val elapsedMinutes = (currentTime - lastCalorieUpdateTime) / 60000f
+        if (elapsedMinutes > 0) {
+            sessionCalories += data.caloriesPerMinute * elapsedMinutes
+            lastCalorieUpdateTime = currentTime
+        }
+        binding.txtSessionCalories.text = String.format("%.0f", sessionCalories)
+
+        // Update context indicator
+        binding.txtContextIndicator.text = if (data.isInPocket) "In pocket" else "Active"
+    }
+
+    private fun updateActivityDots(state: ActivityTracker.ActivityState) {
+        val activeDrawable = R.drawable.activity_dot_active
+        val inactiveDrawable = R.drawable.activity_dot_inactive
+
+        binding.dotSedentary.setBackgroundResource(
+            if (state.ordinal >= ActivityTracker.ActivityState.RESTING.ordinal) activeDrawable else inactiveDrawable
+        )
+        binding.dotLight.setBackgroundResource(
+            if (state.ordinal >= ActivityTracker.ActivityState.LIGHT.ordinal) activeDrawable else inactiveDrawable
+        )
+        binding.dotModerate.setBackgroundResource(
+            if (state.ordinal >= ActivityTracker.ActivityState.MODERATE.ordinal) activeDrawable else inactiveDrawable
+        )
+        binding.dotVigorous.setBackgroundResource(
+            if (state.ordinal >= ActivityTracker.ActivityState.VIGOROUS.ordinal) activeDrawable else inactiveDrawable
+        )
     }
 
     // -------------------------------------------------
@@ -213,23 +277,27 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
     // -------------------------------------------------
 
     private fun refreshData() {
-        checkLocationPermissionAndLoad(forceRefresh = true)
+        loadWithProfileLocation(forceRefresh = true)
     }
 
     private fun checkLocationPermissionAndLoad(forceRefresh: Boolean = false) {
-        val permission = Manifest.permission.ACCESS_FINE_LOCATION
-        when {
-            ContextCompat.checkSelfPermission(requireContext(), permission) == PackageManager.PERMISSION_GRANTED -> {
-                loadUserLocationAndFetch(forceRefresh)
-            }
-            else -> {
-                locationPermissionLauncher.launch(permission)
-            }
+        // Use profile location instead of GPS
+        loadWithProfileLocation(forceRefresh)
+    }
+
+    /**
+     * Gets the user's location from their profile, defaulting to Madison, WI if not set
+     */
+    private fun getProfileLocation(): String {
+        val profileLocation = UserStore.location
+        return if (!profileLocation.isNullOrBlank()) {
+            profileLocation
+        } else {
+            "Madison, WI" // Default location
         }
     }
 
-    @SuppressLint("MissingPermission")
-    private fun loadUserLocationAndFetch(forceRefresh: Boolean) {
+    private fun loadWithProfileLocation(forceRefresh: Boolean = false) {
         if (forceRefresh) {
             binding.swipeRefresh.isRefreshing = true
         } else {
@@ -246,25 +314,13 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
             }
         }
 
-        val fused = LocationServices.getFusedLocationProviderClient(requireActivity())
-
-        fused.lastLocation
-            .addOnSuccessListener { loc ->
-                if (loc != null) {
-                    loadData(loc.latitude, loc.longitude)
-                } else {
-                    loadData(43.0731, -89.4012) // Fallback
-                }
-            }
-            .addOnFailureListener {
-                loadData(43.0731, -89.4012) // Fallback
-            }
+        val locationString = getProfileLocation()
+        loadDataWithLocation(locationString)
     }
 
-    private fun loadData(lat: Double, lng: Double) {
+    private fun loadDataWithLocation(locationString: String) {
         lifecycleScope.launch {
             try {
-                val locationString = getLocationString(lat, lng)
 
                 val emotionData = RecommendationEngine.createEmotionData(
                     emotion = "neutral",
@@ -331,32 +387,6 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
 
                 android.util.Log.e("ActivitiesFragment", "Error loading data", e)
             }
-        }
-    }
-
-    private fun getLocationString(lat: Double, lng: Double): String {
-        return try {
-            val geocoder = Geocoder(requireContext(), Locale.getDefault())
-            val addresses = geocoder.getFromLocation(lat, lng, 1)
-
-            if (addresses?.isNotEmpty() == true) {
-                val address = addresses[0]
-                val city = address.locality ?: address.subAdminArea ?: ""
-                val state = address.adminArea ?: ""
-                val country = address.countryName ?: ""
-
-                when {
-                    city.isNotEmpty() && state.isNotEmpty() -> "$city, $state"
-                    city.isNotEmpty() -> city
-                    state.isNotEmpty() -> state
-                    country.isNotEmpty() -> country
-                    else -> "latitude: $lat, longitude: $lng"
-                }
-            } else {
-                "latitude: $lat, longitude: $lng"
-            }
-        } catch (e: Exception) {
-            "latitude: $lat, longitude: $lng"
         }
     }
 
@@ -481,11 +511,22 @@ class ActivitiesFragment : Fragment(), SensorEventListener {
         stepSensor?.let {
             sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
         }
+        // Start activity tracker
+        activityTracker?.start()
+        lastCalorieUpdateTime = System.currentTimeMillis()
     }
 
     override fun onPause() {
         super.onPause()
         sensorManager?.unregisterListener(this)
+        // Stop activity tracker
+        activityTracker?.stop()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        activityTracker?.stop()
+        activityTracker = null
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
