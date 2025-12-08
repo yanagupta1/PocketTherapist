@@ -1,5 +1,7 @@
 package com.example.pockettherapist
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -22,6 +24,8 @@ class RecommendationsFragment : Fragment() {
 
     private val TAG = "RecommendationsFragment"
     private var currentJournalId: String? = null
+    private var isWellnessExpanded = false
+    private var currentYoutubeUrl: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -47,6 +51,23 @@ class RecommendationsFragment : Fragment() {
         binding.recyclerSongs.apply {
             layoutManager = GridLayoutManager(requireContext(), 2)
             adapter = songAdapter
+        }
+
+        // Setup wellness card click to expand/collapse
+        binding.cardWellness.setOnClickListener {
+            toggleWellnessExpansion()
+        }
+
+        // Setup YouTube button click - opens in external YouTube app or browser
+        binding.btnWatchVideo.setOnClickListener {
+            currentYoutubeUrl?.let { url ->
+                if (url.isNotEmpty()) {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    // Use chooser to ensure it opens externally
+                    startActivity(Intent.createChooser(intent, "Open with"))
+                }
+            }
         }
 
         // Setup SwipeRefreshLayout
@@ -116,14 +137,17 @@ class RecommendationsFragment : Fragment() {
             // Display cached wellness
             val wellnessTitle = RecommendationsCache.getWellnessTitle()
             val wellnessDescription = RecommendationsCache.getWellnessDescription()
+            val wellnessDetailedExplanation = RecommendationsCache.getWellnessDetailedExplanation()
+            val wellnessYoutubeUrl = RecommendationsCache.getWellnessYoutubeUrl()
 
             binding.progressWellness.visibility = View.GONE
             if (!wellnessTitle.isNullOrEmpty()) {
-                binding.txtWellnessTitle.text = wellnessTitle
-                if (!wellnessDescription.isNullOrEmpty()) {
-                    binding.txtWellnessDescription.text = wellnessDescription
-                    binding.txtWellnessDescription.visibility = View.VISIBLE
-                }
+                updateWellnessUI(
+                    title = wellnessTitle,
+                    description = wellnessDescription ?: "",
+                    detailedExplanation = wellnessDetailedExplanation,
+                    youtubeUrl = wellnessYoutubeUrl
+                )
             } else {
                 binding.txtWellnessTitle.text = getString(R.string.no_recommendations)
             }
@@ -189,12 +213,22 @@ class RecommendationsFragment : Fragment() {
 
                 if (wellness != null && wellness.techniques.isNotEmpty()) {
                     val technique = wellness.techniques.first()
-                    binding.txtWellnessTitle.text = technique.name
-                    binding.txtWellnessDescription.text = technique.description
-                    binding.txtWellnessDescription.visibility = View.VISIBLE
 
-                    // Cache the wellness recommendation
-                    RecommendationsCache.saveWellness(journalId, technique.name, technique.description)
+                    updateWellnessUI(
+                        title = technique.name,
+                        description = technique.description,
+                        detailedExplanation = technique.detailedExplanation,
+                        youtubeUrl = technique.youtubeUrl
+                    )
+
+                    // Cache the wellness recommendation with new fields
+                    RecommendationsCache.saveWellness(
+                        journalId,
+                        technique.name,
+                        technique.description,
+                        technique.detailedExplanation,
+                        technique.youtubeUrl
+                    )
                 } else {
                     binding.txtWellnessTitle.text = getString(R.string.no_recommendations)
                 }
@@ -276,5 +310,48 @@ class RecommendationsFragment : Fragment() {
             binding.txtWellnessTitle.text = getString(R.string.no_recommendations)
             binding.layoutSongsLoading.visibility = View.GONE
         }
+    }
+
+    private fun toggleWellnessExpansion() {
+        isWellnessExpanded = !isWellnessExpanded
+
+        if (isWellnessExpanded) {
+            binding.layoutWellnessDetails.visibility = View.VISIBLE
+            binding.txtTapToExpand.text = "Tap to collapse"
+        } else {
+            binding.layoutWellnessDetails.visibility = View.GONE
+            binding.txtTapToExpand.text = "Tap for more details"
+        }
+    }
+
+    private fun updateWellnessUI(
+        title: String,
+        description: String,
+        detailedExplanation: String?,
+        youtubeUrl: String?
+    ) {
+        binding.txtWellnessTitle.text = title
+        binding.txtWellnessDescription.text = description
+        binding.txtWellnessDescription.visibility = View.VISIBLE
+
+        // Set up detailed explanation
+        if (!detailedExplanation.isNullOrEmpty()) {
+            binding.txtWellnessDetailedExplanation.text = detailedExplanation
+            binding.txtTapToExpand.visibility = View.VISIBLE
+        } else {
+            binding.txtTapToExpand.visibility = View.GONE
+        }
+
+        // Set up YouTube button
+        currentYoutubeUrl = youtubeUrl
+        if (!youtubeUrl.isNullOrEmpty()) {
+            binding.btnWatchVideo.visibility = View.VISIBLE
+        } else {
+            binding.btnWatchVideo.visibility = View.GONE
+        }
+
+        // Reset expansion state
+        isWellnessExpanded = false
+        binding.layoutWellnessDetails.visibility = View.GONE
     }
 }

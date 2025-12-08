@@ -82,6 +82,8 @@ class RecommendationEngine(private val context: Context) {
         val duration: String,
         val difficulty: String,
         val description: String,
+        val detailedExplanation: String,
+        val youtubeUrl: String,
         val instructions: List<String>,
         val benefits: List<String>,
         val tips: List<String>?
@@ -125,31 +127,59 @@ class RecommendationEngine(private val context: Context) {
     }
 
     private fun buildSongPrompt(journalText: String, emotionData: EmotionData): String {
+        // Add randomization to get varied recommendations
+        val randomSeed = System.currentTimeMillis() % 1000
+        val varietyHints = listOf(
+            "Include some indie or alternative tracks",
+            "Mix in instrumental or classical pieces",
+            "Consider acoustic versions",
+            "Include songs from different decades",
+            "Mix popular hits with lesser-known gems",
+            "Focus on meaningful lyrics"
+        )
+        val selectedHint = varietyHints[(randomSeed % varietyHints.size).toInt()]
+
         return """
-You are a music therapist AI. Recommend 6-7 REAL Spotify songs based on the user's emotional state.
+You are a music therapist AI. Recommend exactly 4 REAL Spotify songs based on the user's emotional state.
 
 User Journal: "$journalText"
 Emotion: ${emotionData.emotion} (${emotionData.emotionScore})
 Sentiment: ${emotionData.sentiment} (${emotionData.sentimentScore})
 
+VARIETY HINT: $selectedHint
+Random seed: $randomSeed (use this to vary your picks)
+
 Return ONLY valid JSON in this EXACT format (no markdown, no code blocks):
 {
   "songs": [
-    {"title": "Breathe Me", "artist": "Sia"},
-    {"title": "Weightless", "artist": "Marconi Union"},
-    {"title": "Clair de Lune", "artist": "Claude Debussy"}
+    {"title": "Song Title", "artist": "Artist Name"}
   ],
-  "mood": "Calming and soothing",
+  "mood": "Description of the mood",
   "reasoning": "Why these songs help"
 }
 
-Guidelines by emotion:
-- sadness: Fix You-Coldplay, Lean on Me-Bill Withers, The Scientist-Coldplay
-- fear/anxiety: Weightless-Marconi Union, Clair de Lune-Debussy, Breathe Me-Sia
-- anger: Smells Like Teen Spirit-Nirvana, Break Stuff-Limp Bizkit
-- joy: Happy-Pharrell Williams, Walking on Sunshine-Katrina and the Waves
-- love: Can't Help Falling in Love-Elvis Presley, At Last-Etta James
-- surprise: Eye of the Tiger-Survivor, Don't Stop Believin'-Journey
+Example artists by emotion (pick different ones, don't always use the same):
+- sadness: Coldplay, Adele, Bon Iver, The National, Billie Eilish, Sam Smith
+- anxiety: Marconi Union, Enya, Debussy, Sigur Rós, Explosions in the Sky, Tycho
+- anger: Linkin Park, Rage Against the Machine, Foo Fighters, Green Day, Metallica
+- joy: Pharrell, Bruno Mars, Lizzo, ABBA, Queen, Earth Wind & Fire
+- love: Ed Sheeran, Etta James, John Legend, Whitney Houston, Elvis
+
+IMPORTANT:
+- Return exactly 4 songs total (no more, no less)
+- Vary your picks based on the random seed and journal content. Don't always suggest the same songs.
+- ONE of the 4 songs MUST be a Thalapathy Vijay movie song - use the MUSIC DIRECTOR as artist (that's how Spotify credits them):
+  * Vaathi Coming - Anirudh Ravichander
+  * Arabic Kuthu - Anirudh Ravichander
+  * Kutti Story - Anirudh Ravichander
+  * Jolly O Gymkhana - Anirudh Ravichander
+  * What A Karvaad - Anirudh Ravichander
+  * Naa Ready - Anirudh Ravichander
+  * Ranjithame - Anirudh Ravichander
+  * Selfie Pulla - Anirudh Ravichander
+  * Appadi Podu - Devi Sri Prasad
+  * Once Upon A Time - Anirudh Ravichander
+  Pick a DIFFERENT song each time based on the random seed!
 
 Return ONLY the JSON object, nothing else.
         """.trimIndent()
@@ -348,6 +378,18 @@ Return ONLY the JSON object, nothing else.
     }
 
     private fun buildWellnessPrompt(journalText: String, emotionData: EmotionData): String {
+        // Add randomization for variety
+        val randomSeed = System.currentTimeMillis() % 1000
+        val focusAreas = listOf(
+            "breathing and relaxation techniques",
+            "mindfulness and grounding exercises",
+            "physical movement and stretching",
+            "cognitive and journaling practices",
+            "meditation and visualization",
+            "self-compassion and acceptance techniques"
+        )
+        val selectedFocus = focusAreas[(randomSeed % focusAreas.size).toInt()]
+
         return """
 You are a wellness coach AI. Recommend detailed wellness techniques.
 
@@ -355,52 +397,36 @@ User Journal: "$journalText"
 Emotion: ${emotionData.emotion} (${emotionData.emotionScore})
 Sentiment: ${emotionData.sentiment} (${emotionData.sentimentScore})
 
+VARIETY FOCUS: Emphasize $selectedFocus
+Random seed: $randomSeed (use this to vary your recommendations)
+
 Return ONLY valid JSON in this EXACT format:
 {
   "techniques": [
     {
-      "name": "Box Breathing",
-      "category": "breathing",
+      "name": "Technique Name",
+      "category": "breathing/mindfulness/movement/cognitive",
       "duration": "2-5 min",
-      "difficulty": "easy",
-      "description": "A simple breathing technique to calm anxiety",
-      "instructions": [
-        "Sit comfortably with your back straight",
-        "Inhale slowly through your nose for 4 counts",
-        "Hold your breath for 4 counts",
-        "Exhale slowly through your mouth for 4 counts",
-        "Hold empty lungs for 4 counts",
-        "Repeat 5-10 times"
-      ],
-      "benefits": [
-        "Activates parasympathetic nervous system",
-        "Reduces heart rate and blood pressure",
-        "Improves focus and mental clarity",
-        "Immediate anxiety relief"
-      ],
-      "tips": [
-        "Count slowly and steadily",
-        "Focus on the sensation of breathing",
-        "Don't force the breath",
-        "Practice regularly for best results"
-      ]
+      "difficulty": "easy/medium/hard",
+      "description": "Brief one-sentence description",
+      "detailedExplanation": "A comprehensive 3-4 sentence explanation of what this technique is, its origins, and why it's effective for the user's current emotional state. Include scientific background if relevant.",
+      "instructions": ["Step 1", "Step 2", "Step 3"],
+      "benefits": ["Benefit 1", "Benefit 2", "Benefit 3"],
+      "tips": ["Tip 1", "Tip 2"]
     }
   ],
   "reasoning": "Why these techniques were selected"
 }
 
-Recommend 5-7 techniques from categories:
-- breathing: Box Breathing, 4-7-8 Breathing, Diaphragmatic Breathing
-- mindfulness: 5-4-3-2-1 Grounding, Body Scan, Mindful Walking
-- movement: Gentle Stretching, Progressive Muscle Relaxation, Yoga Poses
-- cognitive: Gratitude Journaling, Positive Affirmations, Thought Challenging
+Recommend 5-7 techniques from these categories (vary based on random seed):
+- breathing: Box Breathing, 4-7-8 Breathing, Diaphragmatic Breathing, Alternate Nostril Breathing, Lion's Breath, Pursed Lip Breathing
+- mindfulness: 5-4-3-2-1 Grounding, Body Scan, Mindful Walking, Loving-Kindness Meditation, RAIN Technique, Mindful Eating
+- movement: Gentle Stretching, Progressive Muscle Relaxation, Yoga Poses, Tai Chi movements, Walking Meditation, Dance Movement
+- cognitive: Gratitude Journaling, Positive Affirmations, Thought Challenging, Reframing Exercises, Values Clarification, Self-Compassion Writing
 
-Each technique MUST include:
-- name, category, duration, difficulty
-- description (1 sentence)
-- instructions (step-by-step list)
-- benefits (3-5 points why it helps)
-- tips (optional, 2-4 practical tips)
+IMPORTANT:
+- detailedExplanation should be informative and personalized to the user's emotional state
+- Vary your recommendations based on the random seed - don't always pick the same techniques
 
 Return ONLY the JSON object, nothing else.
         """.trimIndent()
@@ -414,13 +440,19 @@ Return ONLY the JSON object, nothing else.
 
         for (i in 0 until techniquesArray.length()) {
             val techObj = techniquesArray.getJSONObject(i)
+            val techniqueName = techObj.getString("name")
+
+            // Generate a working YouTube search URL based on technique name
+            val youtubeSearchUrl = createYoutubeSearchUrl(techniqueName)
 
             techniques.add(WellnessTechnique(
-                name = techObj.getString("name"),
+                name = techniqueName,
                 category = techObj.getString("category"),
                 duration = techObj.getString("duration"),
                 difficulty = techObj.getString("difficulty"),
                 description = techObj.getString("description"),
+                detailedExplanation = techObj.optString("detailedExplanation", techObj.getString("description")),
+                youtubeUrl = youtubeSearchUrl,
                 instructions = jsonArrayToList(techObj.getJSONArray("instructions")),
                 benefits = jsonArrayToList(techObj.getJSONArray("benefits")),
                 tips = if (techObj.has("tips")) {
@@ -433,6 +465,11 @@ Return ONLY the JSON object, nothing else.
             techniques = techniques,
             reasoning = jsonResponse.getString("reasoning")
         )
+    }
+
+    private fun createYoutubeSearchUrl(techniqueName: String): String {
+        val query = URLEncoder.encode("$techniqueName tutorial guided", "UTF-8")
+        return "https://www.youtube.com/results?search_query=$query"
     }
 
     // ==================== HELPER FUNCTIONS ====================

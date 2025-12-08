@@ -17,6 +17,8 @@ object RecommendationsCache {
     private const val KEY_LATEST_JOURNAL_ID = "latest_journal_id"
     private const val KEY_WELLNESS_TITLE = "wellness_title"
     private const val KEY_WELLNESS_DESCRIPTION = "wellness_description"
+    private const val KEY_WELLNESS_DETAILED_EXPLANATION = "wellness_detailed_explanation"
+    private const val KEY_WELLNESS_YOUTUBE_URL = "wellness_youtube_url"
     private const val KEY_SONGS_JSON = "songs_json"
 
     private var prefs: SharedPreferences? = null
@@ -45,11 +47,13 @@ object RecommendationsCache {
     /**
      * Save wellness recommendation to cache
      */
-    fun saveWellness(journalId: String, title: String, description: String) {
+    fun saveWellness(journalId: String, title: String, description: String, detailedExplanation: String = "", youtubeUrl: String = "") {
         prefs?.edit()?.apply {
             putString(KEY_LATEST_JOURNAL_ID, journalId)
             putString(KEY_WELLNESS_TITLE, title)
             putString(KEY_WELLNESS_DESCRIPTION, description)
+            putString(KEY_WELLNESS_DETAILED_EXPLANATION, detailedExplanation)
+            putString(KEY_WELLNESS_YOUTUBE_URL, youtubeUrl)
             apply()
         }
     }
@@ -66,6 +70,20 @@ object RecommendationsCache {
      */
     fun getWellnessDescription(): String? {
         return prefs?.getString(KEY_WELLNESS_DESCRIPTION, null)
+    }
+
+    /**
+     * Get cached wellness detailed explanation
+     */
+    fun getWellnessDetailedExplanation(): String? {
+        return prefs?.getString(KEY_WELLNESS_DETAILED_EXPLANATION, null)
+    }
+
+    /**
+     * Get cached wellness YouTube URL
+     */
+    fun getWellnessYoutubeUrl(): String? {
+        return prefs?.getString(KEY_WELLNESS_YOUTUBE_URL, null)
     }
 
     /**
