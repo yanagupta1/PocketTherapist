@@ -25,6 +25,7 @@ import android.text.TextWatcher
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import coil.request.CachePolicy
 
 class ProfileFragment : Fragment() {
 
@@ -174,14 +175,19 @@ class ProfileFragment : Fragment() {
         binding.editBio.setText(UserStore.bio ?: "")
         binding.editInterests.setText(UserStore.interests ?: "")
 
-        // Load profile picture with Coil
-        UserStore.profilePictureUrl?.let { url ->
-            if (url.isNotEmpty()) {
-                binding.imgProfile.load(url) {
-                    crossfade(true)
-                    placeholder(R.drawable.ic_profile_placeholder)
-                    error(R.drawable.ic_profile_placeholder)
-                    transformations(CircleCropTransformation())
+        // Load profile picture with Coil (from local file)
+        UserStore.profilePictureUrl?.let { path ->
+            if (path.isNotEmpty()) {
+                val file = File(path)
+                if (file.exists()) {
+                    binding.imgProfile.load(file) {
+                        crossfade(true)
+                        placeholder(R.drawable.ic_profile_placeholder)
+                        error(R.drawable.ic_profile_placeholder)
+                        transformations(CircleCropTransformation())
+                        memoryCachePolicy(CachePolicy.DISABLED)
+                        diskCachePolicy(CachePolicy.DISABLED)
+                    }
                 }
             }
         }
@@ -198,13 +204,18 @@ class ProfileFragment : Fragment() {
         binding.editBio.setText(profile.bio)
         binding.editInterests.setText(profile.interests)
 
-        // Load profile picture with Coil
+        // Load profile picture with Coil (from local file)
         if (profile.profilePictureUrl.isNotEmpty()) {
-            binding.imgProfile.load(profile.profilePictureUrl) {
-                crossfade(true)
-                placeholder(R.drawable.ic_profile_placeholder)
-                error(R.drawable.ic_profile_placeholder)
-                transformations(CircleCropTransformation())
+            val file = File(profile.profilePictureUrl)
+            if (file.exists()) {
+                binding.imgProfile.load(file) {
+                    crossfade(true)
+                    placeholder(R.drawable.ic_profile_placeholder)
+                    error(R.drawable.ic_profile_placeholder)
+                    transformations(CircleCropTransformation())
+                    memoryCachePolicy(CachePolicy.DISABLED)
+                    diskCachePolicy(CachePolicy.DISABLED)
+                }
             }
         }
     }
@@ -384,21 +395,24 @@ class ProfileFragment : Fragment() {
         // Show loading state
         binding.imgProfile.alpha = 0.5f
 
-        // Upload to Firebase Storage
+        // Save to local storage
         UserStore.uploadProfilePicture(
             imageUri = uri,
-            onSuccess = { downloadUrl ->
+            onSuccess = { localPath ->
                 binding.imgProfile.alpha = 1.0f
-                // Update image with new URL
-                binding.imgProfile.load(downloadUrl) {
+                // Update image from local file
+                val file = File(localPath)
+                binding.imgProfile.load(file) {
                     crossfade(true)
                     transformations(CircleCropTransformation())
+                    memoryCachePolicy(CachePolicy.DISABLED)
+                    diskCachePolicy(CachePolicy.DISABLED)
                 }
                 Toast.makeText(requireContext(), "Profile picture updated", Toast.LENGTH_SHORT).show()
             },
             onFailure = { error ->
                 binding.imgProfile.alpha = 1.0f
-                Toast.makeText(requireContext(), "Failed to upload: $error", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Failed to save: $error", Toast.LENGTH_SHORT).show()
             }
         )
     }

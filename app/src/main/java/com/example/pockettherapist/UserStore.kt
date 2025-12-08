@@ -7,13 +7,16 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-import com.google.firebase.storage.FirebaseStorage
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 object UserStore {
     private val database = FirebaseDatabase.getInstance()
     private val usersRef = database.getReference("users")
 
     private const val PREFS_NAME = "pocket_therapist_prefs"
+    private const val PROFILE_PICS_PREFS = "profile_pictures_prefs"
     private const val KEY_USERNAME = "logged_in_username"
     private const val KEY_AGE = "user_age"
     private const val KEY_GENDER = "user_gender"
@@ -25,6 +28,8 @@ object UserStore {
     private const val KEY_PROFILE_PICTURE_URL = "profile_picture_url"
 
     private var prefs: SharedPreferences? = null
+    private var profilePicsPrefs: SharedPreferences? = null
+    private var appContext: Context? = null
 
     var loggedInUser: String? = null
     var age: String? = null
@@ -37,7 +42,9 @@ object UserStore {
     var profilePictureUrl: String? = null
 
     fun init(context: Context) {
+        appContext = context.applicationContext
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        profilePicsPrefs = context.getSharedPreferences(PROFILE_PICS_PREFS, Context.MODE_PRIVATE)
         // Restore saved session
         loggedInUser = prefs?.getString(KEY_USERNAME, null)
         age = prefs?.getString(KEY_AGE, null)
@@ -47,7 +54,10 @@ object UserStore {
         birthdate = prefs?.getString(KEY_BIRTHDATE, null)
         location = prefs?.getString(KEY_LOCATION, null)
         interests = prefs?.getString(KEY_INTERESTS, null)
-        profilePictureUrl = prefs?.getString(KEY_PROFILE_PICTURE_URL, null)
+        // Load profile picture path from username mapping
+        loggedInUser?.let { username ->
+            profilePictureUrl = profilePicsPrefs?.getString(username, null)
+        }
     }
 
     fun isLoggedIn(): Boolean = loggedInUser != null
@@ -135,7 +145,8 @@ object UserStore {
                     birthdate = snapshot.child("birthdate").getValue(String::class.java)
                     location = snapshot.child("location").getValue(String::class.java)
                     interests = snapshot.child("interests").getValue(String::class.java)
-                    profilePictureUrl = snapshot.child("profilePictureUrl").getValue(String::class.java)
+                    // Load profile picture from local storage mapping
+                    profilePictureUrl = profilePicsPrefs?.getString(username, null)
                     saveSession()
                     onSuccess()
                 } else {
@@ -245,28 +256,52 @@ object UserStore {
             return
         }
 
-        val storageRef = FirebaseStorage.getInstance()
-            .getReference("profile_pictures/$username/profile.jpg")
+        val context = appContext ?: run {
+            onFailure("App not initialized")
+            return
+        }
 
-        storageRef.putFile(imageUri)
-            .addOnSuccessListener {
-                storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                    val url = downloadUrl.toString()
-                    // Update database with URL
-                    usersRef.child(username).child("profilePictureUrl").setValue(url)
-                        .addOnSuccessListener {
-                            this@UserStore.profilePictureUrl = url
-                            saveSession()
-                            onSuccess(url)
-                        }
-                        .addOnFailureListener { e ->
-                            onFailure(e.message ?: "Failed to save URL")
-                        }
+        try {
+            // Create profile pictures directory
+            val profilePicsDir = File(context.filesDir, "profile_pictures")
+            if (!profilePicsDir.exists()) {
+                profilePicsDir.mkdirs()
+            }
+
+            // Create file for this user's profile picture
+            val profilePicFile = File(profilePicsDir, "$username.jpg")
+
+            // Copy image from URI to local file
+            context.contentResolver.openInputStream(imageUri)?.use { inputStream ->
+                FileOutputStream(profilePicFile).use { outputStream ->
+                    inputStream.copyTo(outputStream)
                 }
+            } ?: run {
+                onFailure("Could not read image")
+                return
             }
-            .addOnFailureListener { e ->
-                onFailure(e.message ?: "Upload failed")
-            }
+
+            // Store the local file path
+            val localPath = profilePicFile.absolutePath
+
+            // Save mapping of username -> local path
+            profilePicsPrefs?.edit()?.putString(username, localPath)?.apply()
+
+            // Update local state
+            profilePictureUrl = localPath
+            saveSession()
+
+            onSuccess(localPath)
+        } catch (e: Exception) {
+            onFailure(e.message ?: "Failed to save profile picture")
+        }
+    }
+
+    /**
+     * Get the profile picture path for a specific username
+     */
+    fun getProfilePicturePath(username: String): String? {
+        return profilePicsPrefs?.getString(username, null)
     }
 
     fun loadProfile(
@@ -280,6 +315,9 @@ object UserStore {
 
         usersRef.child(username).addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
+                // Get profile picture from local storage mapping
+                val localProfilePicPath = profilePicsPrefs?.getString(username, null) ?: ""
+
                 val profile = UserProfile(
                     username = username,
                     displayName = snapshot.child("displayName").getValue(String::class.java) ?: "",
@@ -289,7 +327,7 @@ object UserStore {
                     birthdate = snapshot.child("birthdate").getValue(String::class.java) ?: "",
                     location = snapshot.child("location").getValue(String::class.java) ?: "",
                     interests = snapshot.child("interests").getValue(String::class.java) ?: "",
-                    profilePictureUrl = snapshot.child("profilePictureUrl").getValue(String::class.java) ?: ""
+                    profilePictureUrl = localProfilePicPath
                 )
                 // Update local cache
                 displayName = profile.displayName
@@ -299,7 +337,7 @@ object UserStore {
                 birthdate = profile.birthdate
                 location = profile.location
                 interests = profile.interests
-                profilePictureUrl = profile.profilePictureUrl
+                profilePictureUrl = localProfilePicPath
                 saveSession()
                 onSuccess(profile)
             }
