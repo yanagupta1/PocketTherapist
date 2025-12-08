@@ -147,6 +147,220 @@
 
             </androidx.cardview.widget.CardView>
 
+            <!-- Daily Activity Goal Card -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardActivityLevel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/dark_card"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header with edit button -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/txtActivityLabel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="DAILY ACTIVITY GOAL"
+                            android:textColor="@color/accent_purple"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:textSize="12sp"
+                            android:letterSpacing="0.05" />
+
+                        <ImageView
+                            android:id="@+id/btnEditActivityGoal"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_edit"
+                            android:contentDescription="Edit activity goal"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                    </LinearLayout>
+
+                    <!-- Activity percentage display -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/txtActivityPercent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/text_light"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:textSize="32sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="%"
+                            android:textColor="@color/hint_color"
+                            android:fontFamily="@font/poppins_regular"
+                            android:textSize="18sp" />
+
+                        <TextView
+                            android:id="@+id/txtActivityGoalInfo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:text="of daily goal"
+                            android:textColor="@color/hint_color"
+                            android:fontFamily="@font/poppins_regular"
+                            android:textSize="14sp" />
+
+                    </LinearLayout>
+
+                    <!-- Activity progress bar -->
+                    <ProgressBar
+                        android:id="@+id/progressActivity"
+                        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="12dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressTint="@color/accent_purple"
+                        android:progressBackgroundTint="@color/dark_gray" />
+
+                    <!-- Activity minutes info -->
+                    <TextView
+                        android:id="@+id/txtActivityMinutes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="0 / 30 active minutes"
+                        android:textColor="@color/hint_color"
+                        android:fontFamily="@font/poppins_regular"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- Calories Card -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardCalories"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/dark_card"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header with edit button -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="DAILY CALORIES"
+                            android:textColor="@color/accent_purple"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:textSize="12sp"
+                            android:letterSpacing="0.05" />
+
+                        <ImageView
+                            android:id="@+id/btnEditCalorieGoal"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_edit"
+                            android:contentDescription="Edit calorie goal"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                    </LinearLayout>
+
+                    <!-- Calorie count display -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/txtCaloriesBurned"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/text_light"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:textSize="32sp" />
+
+                        <TextView
+                            android:id="@+id/txtCalorieGoal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="/ 500 cal"
+                            android:textColor="@color/hint_color"
+                            android:fontFamily="@font/poppins_regular"
+                            android:textSize="16sp" />
+
+                    </LinearLayout>
+
+                    <!-- Calorie progress bar -->
+                    <ProgressBar
+                        android:id="@+id/progressCalories"
+                        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="12dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressTint="@color/accent_purple"
+                        android:progressBackgroundTint="@color/dark_gray" />
+
+                    <!-- Calorie progress percentage -->
+                    <TextView
+                        android:id="@+id/txtCaloriePercent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="0% of daily goal"
+                        android:textColor="@color/hint_color"
+                        android:fontFamily="@font/poppins_regular"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
             <!-- Events Section Header -->
             <TextView
                 android:id="@+id/txtEventsHeader"
