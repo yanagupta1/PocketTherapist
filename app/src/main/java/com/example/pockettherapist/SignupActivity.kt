@@ -78,6 +78,8 @@ class SignupActivity : AppCompatActivity() {
                 age = ageText,
                 onSuccess = {
                     Toast.makeText(this, "Account created!", Toast.LENGTH_SHORT).show()
+                    // Store active account
+                    UserStore.setCurrentUsername(username)
                     startActivity(Intent(this, MainActivity::class.java))
                     finish()
                 },

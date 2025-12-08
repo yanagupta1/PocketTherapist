@@ -39,6 +39,7 @@ class SignInActivity : AppCompatActivity() {
                 username = u,
                 password = p,
                 onSuccess = {
+                    UserStore.setCurrentUsername(u)
                     startActivity(Intent(this, MainActivity::class.java))
                     finish()
                 },

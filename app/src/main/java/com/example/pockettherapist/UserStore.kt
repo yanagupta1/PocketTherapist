@@ -436,4 +436,16 @@ object UserStore {
                 onFailure(e.message ?: "Failed to delete journal entry")
             }
     }
+
+    fun setCurrentUsername(username: String) {
+        loggedInUser = username
+        prefs?.edit()?.putString(KEY_USERNAME, username)?.apply()
+    }
+
+    fun getCurrentUsername(): String {
+        return prefs?.getString(KEY_USERNAME, "") ?: ""
+    }
+
+
+
 }

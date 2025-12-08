@@ -45,6 +45,17 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val username = UserStore.getCurrentUsername()  // IMPORTANT
+
+        // SHOW ONBOARDING ONE TIME FOR THIS USER ONLY
+        if (FirstTimeStore.isFirstTime(requireContext(), username)) {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, OnboardingFragment.newInstance(username))
+                .commit()
+            return
+        }
+
+
         checkMicPermission()
         setupAudioHelper()
         setupRecyclerView()
