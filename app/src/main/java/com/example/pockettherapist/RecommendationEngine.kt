@@ -94,6 +94,13 @@ class RecommendationEngine(private val context: Context) {
         val reasoning: String
     )
 
+    // Combined recommendations - single API call for both wellness + songs
+    data class CombinedRecommendation(
+        val wellness: WellnessTechnique?,
+        val songs: List<SongDetail>,
+        val songsMood: String
+    )
+
     data class EventDetail(
         val name: String,
         val date: String,
@@ -169,6 +176,117 @@ Return ONLY the JSON object, nothing else.
         return jsonResponse.getString("response")
     }
 
+    // ==================== COMBINED RECOMMENDATIONS (Single API Call) ====================
+
+    suspend fun getCombinedRecommendations(
+        journalText: String,
+        emotionData: EmotionData
+    ): CombinedRecommendation? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val prompt = buildCombinedPrompt(journalText, emotionData)
+                val response = callGeminiAPI(prompt)
+                parseCombinedRecommendation(response)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting combined recommendations", e)
+                null
+            }
+        }
+    }
+
+    private fun buildCombinedPrompt(journalText: String, emotionData: EmotionData): String {
+        val randomSeed = System.currentTimeMillis() % 1000
+
+        return """
+You are a wellness and music therapist AI. Based on the user's journal entry and emotional state, recommend ONE wellness technique AND 4 songs.
+
+User Journal: "$journalText"
+Emotion: ${emotionData.emotion} (${emotionData.emotionScore})
+Sentiment: ${emotionData.sentiment} (${emotionData.sentimentScore})
+Random seed: $randomSeed
+
+Return ONLY valid JSON in this EXACT format:
+{
+  "wellness": {
+    "name": "Technique Name",
+    "category": "breathing/mindfulness/movement/cognitive",
+    "duration": "2-5 min",
+    "difficulty": "easy",
+    "description": "Brief one-sentence description",
+    "detailedExplanation": "2-3 sentence explanation of the technique and why it helps"
+  },
+  "songs": [
+    {"title": "Song Title", "artist": "Artist Name"},
+    {"title": "Song Title", "artist": "Artist Name"},
+    {"title": "Song Title", "artist": "Artist Name"},
+    {"title": "Song Title", "artist": "Artist Name"}
+  ],
+  "mood": "Brief mood description"
+}
+
+Wellness techniques to choose from:
+- breathing: Box Breathing, 4-7-8 Breathing, Diaphragmatic Breathing
+- mindfulness: 5-4-3-2-1 Grounding, Body Scan, Loving-Kindness Meditation
+- movement: Gentle Stretching, Progressive Muscle Relaxation
+- cognitive: Gratitude Journaling, Positive Affirmations
+
+Song artists by emotion:
+- sadness: Coldplay, Adele, Bon Iver, Billie Eilish, Sam Smith
+- anxiety: Marconi Union, Enya, Sigur Rós, Tycho
+- anger: Linkin Park, Foo Fighters, Green Day
+- joy: Pharrell, Bruno Mars, Lizzo, ABBA, Queen
+
+IMPORTANT: Return exactly 4 songs. Vary picks based on random seed.
+
+Return ONLY the JSON object, nothing else.
+        """.trimIndent()
+    }
+
+    private fun parseCombinedRecommendation(response: String): CombinedRecommendation {
+        val jsonResponse = JSONObject(response)
+
+        // Parse wellness
+        val wellnessObj = jsonResponse.optJSONObject("wellness")
+        val wellness = if (wellnessObj != null) {
+            val techniqueName = wellnessObj.getString("name")
+            WellnessTechnique(
+                name = techniqueName,
+                category = wellnessObj.getString("category"),
+                duration = wellnessObj.getString("duration"),
+                difficulty = wellnessObj.getString("difficulty"),
+                description = wellnessObj.getString("description"),
+                detailedExplanation = wellnessObj.optString("detailedExplanation", wellnessObj.getString("description")),
+                youtubeUrl = createYoutubeSearchUrl(techniqueName),
+                instructions = listOf(),
+                benefits = listOf(),
+                tips = null
+            )
+        } else null
+
+        // Parse songs
+        val songsArray = jsonResponse.getJSONArray("songs")
+        val songs = mutableListOf<SongDetail>()
+        for (i in 0 until songsArray.length()) {
+            val songObj = songsArray.getJSONObject(i)
+            val title = songObj.getString("title")
+            val artist = songObj.getString("artist")
+            songs.add(SongDetail(
+                title = title,
+                artist = artist,
+                spotifySearchUrl = createSpotifySearchUrl(title, artist),
+                spotifyUri = createSpotifyUri(title, artist)
+            ))
+        }
+
+        val mood = jsonResponse.optString("mood", "")
+
+        return CombinedRecommendation(
+            wellness = wellness,
+            songs = songs,
+            songsMood = mood
+        )
+    }
+
     // ==================== 2. SONG RECOMMENDATIONS ====================
 
     suspend fun getSongRecommendations(
@@ -229,18 +347,6 @@ Example artists by emotion (pick different ones, don't always use the same):
 IMPORTANT:
 - Return exactly 4 songs total (no more, no less)
 - Vary your picks based on the random seed and journal content. Don't always suggest the same songs.
-- ONE of the 4 songs MUST be a Thalapathy Vijay movie song - use the MUSIC DIRECTOR as artist (that's how Spotify credits them):
-  * Vaathi Coming - Anirudh Ravichander
-  * Arabic Kuthu - Anirudh Ravichander
-  * Kutti Story - Anirudh Ravichander
-  * Jolly O Gymkhana - Anirudh Ravichander
-  * What A Karvaad - Anirudh Ravichander
-  * Naa Ready - Anirudh Ravichander
-  * Ranjithame - Anirudh Ravichander
-  * Selfie Pulla - Anirudh Ravichander
-  * Appadi Podu - Devi Sri Prasad
-  * Once Upon A Time - Anirudh Ravichander
-  Pick a DIFFERENT song each time based on the random seed!
 
 Return ONLY the JSON object, nothing else.
         """.trimIndent()

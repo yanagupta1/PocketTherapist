@@ -27,18 +27,47 @@ class OnboardingFragment : Fragment() {
         // Retrieve the username passed from HomeFragment
         username = arguments?.getString("username") ?: ""
 
-        // Continue button → finish onboarding
+        // Continue button → finish onboarding, then show AI consent
         binding.btnContinue.setOnClickListener {
             if (username.isNotEmpty()) {
                 // Mark this user as no longer first-time
                 FirstTimeStore.setNotFirstTime(requireContext(), username)
             }
 
-            // Navigate back to HomeFragment
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, HomeFragment())
-                .commit()
+            // Show AI consent dialog after onboarding
+            showAIConsentThenNavigateHome()
         }
+    }
+
+    private fun showAIConsentThenNavigateHome() {
+        val ctx = requireActivity()
+
+        // Initialize and show AI consent dialog
+        AIConsentManager.init(ctx)
+
+        // Only show if user hasn't made a decision yet
+        if (!AIConsentManager.hasUserMadeConsentDecision()) {
+            AIConsentManager.showConsentDialog(
+                context = ctx,
+                onConsent = {
+                    // User enabled AI, navigate to home
+                    navigateToHome()
+                },
+                onDecline = {
+                    // User declined AI, still navigate to home
+                    navigateToHome()
+                }
+            )
+        } else {
+            // Already made decision, just go home
+            navigateToHome()
+        }
+    }
+
+    private fun navigateToHome() {
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragment_container, HomeFragment())
+            .commit()
     }
 
     companion object {

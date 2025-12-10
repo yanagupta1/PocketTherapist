@@ -2,10 +2,9 @@ package com.example.pockettherapist
 
 import android.content.res.ColorStateList
 import android.graphics.Color
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
@@ -20,6 +19,9 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Initialize AI Consent Manager
+        AIConsentManager.init(this)
+
         // Enable edge-to-edge - content draws behind status bar
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -29,13 +31,12 @@ class MainActivity : AppCompatActivity() {
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars = false
 
+
         // Show HOME first (user already logged in)
         replaceFragment(HomeFragment())
         updateNavIconColor(R.id.nav_home)
 
         binding.bottomNav.setOnItemSelectedListener { item ->
-            val current = supportFragmentManager.findFragmentById(R.id.fragment_container)
-
             when (item.itemId) {
 
                 R.id.nav_home -> {

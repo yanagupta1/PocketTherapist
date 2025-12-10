@@ -44,7 +44,20 @@ class AudioTextHelper(
             override fun onEndOfSpeech() {}
 
             override fun onError(error: Int) {
-                onError?.invoke("Error code: $error")
+                val message = when (error) {
+                    SpeechRecognizer.ERROR_NO_MATCH -> "Couldn't catch that. Hold the button and speak clearly."
+                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech detected. Hold and speak into your phone."
+                    SpeechRecognizer.ERROR_AUDIO -> "Hold the mic button and speak."
+                    SpeechRecognizer.ERROR_CLIENT -> "" // Silent - usually happens on cancel
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission needed."
+                    SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Check your internet connection."
+                    SpeechRecognizer.ERROR_SERVER -> "Try again in a moment."
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Hold and try again."
+                    else -> "Hold the mic button and speak."
+                }
+                if (message.isNotEmpty()) {
+                    onError?.invoke(message)
+                }
             }
 
             override fun onResults(results: Bundle?) {

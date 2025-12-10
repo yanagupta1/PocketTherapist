@@ -67,6 +67,10 @@ class HomeFragment : Fragment() {
 
 
         recommendationEngine = RecommendationEngine(requireContext())
+
+        // Check if user needs to see AI consent (for users who completed onboarding before this feature)
+        checkAndShowAIConsentIfNeeded()
+
         checkMicPermission()
         setupAudioHelper()
         setupRecyclerView()
@@ -74,6 +78,23 @@ class HomeFragment : Fragment() {
         setupOverlay()
         setupMoodSelector()
         loadJournalEntries()
+    }
+
+    private fun checkAndShowAIConsentIfNeeded() {
+        AIConsentManager.init(requireContext())
+
+        // Show consent dialog if user hasn't made a decision yet
+        if (!AIConsentManager.hasUserMadeConsentDecision()) {
+            AIConsentManager.showConsentDialog(
+                context = requireActivity(),
+                onConsent = {
+                    // User enabled AI - nothing extra to do
+                },
+                onDecline = {
+                    // User declined - nothing extra to do
+                }
+            )
+        }
     }
 
     private fun setupMoodSelector() {
@@ -128,10 +149,16 @@ class HomeFragment : Fragment() {
         audioHelper = AudioTextHelper(
             requireContext(),
             onResult = { text ->
-                val current = binding.etNewEntry.text.toString()
+                // Check which field has focus and append to that one
+                val targetField = if (binding.etEntryTitle.hasFocus()) {
+                    binding.etEntryTitle
+                } else {
+                    binding.etNewEntry
+                }
+                val current = targetField.text.toString()
                 val appended = if (current.isEmpty()) text else "$current $text"
-                binding.etNewEntry.setText(appended)
-                binding.etNewEntry.setSelection(appended.length)
+                targetField.setText(appended)
+                targetField.setSelection(appended.length)
             },
             onError = { msg ->
                 Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
@@ -309,12 +336,22 @@ class HomeFragment : Fragment() {
                 journalEntries.add(0, entry)
                 updateList()
 
-                // Check for crisis language first - this takes priority
+                // Check for crisis language first - this takes priority (no AI needed)
                 if (CrisisDetector.containsCrisisLanguage(text)) {
                     CrisisDetector.showCrisisAlert(requireContext())
                 } else {
-                    // Show AI companion response dialog
-                    showCompanionResponseDialog(text, mood)
+                    // Check for AI consent before showing companion response
+                    AIConsentManager.requireConsentForAI(
+                        context = requireContext(),
+                        onAllowed = {
+                            // User has consented, show AI companion response
+                            showCompanionResponseDialog(text, mood)
+                        },
+                        onDenied = {
+                            // User declined AI, just show simple toast
+                            Toast.makeText(requireContext(), "Entry saved!", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             },
             onFailure = { error ->

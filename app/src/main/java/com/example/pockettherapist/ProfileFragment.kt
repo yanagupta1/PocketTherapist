@@ -79,7 +79,100 @@ class ProfileFragment : Fragment() {
 
         setupGenderDropdown()
         setupClickListeners()
+        setupAISettings()
         loadProfileData()
+    }
+
+    private fun setupAISettings() {
+        // Initialize AIConsentManager
+        AIConsentManager.init(requireContext())
+
+        // Set initial switch state
+        binding.switchAIFeatures.isChecked = AIConsentManager.isAIEnabled()
+        updateAIStatusText(AIConsentManager.isAIEnabled())
+
+        // Handle switch toggle
+        binding.switchAIFeatures.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                // User wants to enable AI - show consent dialog if they haven't consented before
+                if (!AIConsentManager.hasUserConsented()) {
+                    // Show full consent dialog
+                    AIConsentManager.showConsentDialog(
+                        context = requireContext(),
+                        onConsent = {
+                            updateAIStatusText(true)
+                            Toast.makeText(requireContext(), "AI features enabled", Toast.LENGTH_SHORT).show()
+                        },
+                        onDecline = {
+                            // User declined in dialog, revert switch
+                            binding.switchAIFeatures.isChecked = false
+                            updateAIStatusText(false)
+                        }
+                    )
+                } else {
+                    // User has consented before, just enable
+                    AIConsentManager.setAIFeaturesEnabled(true)
+                    updateAIStatusText(true)
+                    Toast.makeText(requireContext(), "AI features enabled", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                // User wants to disable AI
+                AIConsentManager.setAIFeaturesEnabled(false)
+                updateAIStatusText(false)
+                Toast.makeText(requireContext(), "AI features disabled", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // View privacy info button - shows the consent dialog again
+        binding.btnViewAIPrivacy.setOnClickListener {
+            showAIPrivacyInfo()
+        }
+    }
+
+    private fun updateAIStatusText(enabled: Boolean) {
+        if (enabled) {
+            binding.txtAIStatus.text = "AI features are enabled. Your journal entries are analyzed by Google's Gemini AI to provide personalized wellness tips and music recommendations."
+        } else {
+            binding.txtAIStatus.text = "AI features are disabled. Enable to get personalized wellness recommendations and music suggestions based on your journal entries."
+        }
+    }
+
+    private fun showAIPrivacyInfo() {
+        // Show the consent dialog in info mode (user can see details)
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_ai_consent, null)
+
+        val dialog = AlertDialog.Builder(requireContext(), R.style.Theme_PocketTherapist_AlertDialog)
+            .setView(dialogView)
+            .create()
+
+        val btnEnable = dialogView.findViewById<android.widget.Button>(R.id.btnEnableAI)
+        val btnDecline = dialogView.findViewById<android.widget.Button>(R.id.btnDeclineAI)
+
+        // Update button text based on current state
+        if (AIConsentManager.isAIEnabled()) {
+            btnEnable.text = "Keep Enabled"
+            btnDecline.text = "Disable AI Features"
+        } else {
+            btnEnable.text = "Enable AI Features"
+            btnDecline.text = "Keep Disabled"
+        }
+
+        btnEnable.setOnClickListener {
+            AIConsentManager.enableAIFeatures()
+            binding.switchAIFeatures.isChecked = true
+            updateAIStatusText(true)
+            dialog.dismiss()
+        }
+
+        btnDecline.setOnClickListener {
+            AIConsentManager.disableAIFeatures()
+            binding.switchAIFeatures.isChecked = false
+            updateAIStatusText(false)
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun setupGenderDropdown() {

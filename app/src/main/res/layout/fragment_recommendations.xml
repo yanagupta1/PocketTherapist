@@ -259,6 +259,96 @@
 
         </LinearLayout>
 
+        <!-- AI Disabled State -->
+        <LinearLayout
+            android:id="@+id/layoutAIDisabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <!-- Icon -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🤖"
+                android:textSize="48sp"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Title -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AI Features Required"
+                android:textColor="@color/text_light"
+                android:fontFamily="@font/poppins_semibold"
+                android:textSize="20sp"
+                android:textAlignment="center"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Description -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="This page provides personalized wellness tips and music recommendations based on your journal entries. To use this feature, you need to enable AI-powered recommendations."
+                android:textColor="@color/hint_color"
+                android:fontFamily="@font/poppins_regular"
+                android:textSize="14sp"
+                android:textAlignment="center"
+                android:lineSpacingMultiplier="1.4"
+                android:layout_marginBottom="8dp" />
+
+            <!-- What you get -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="With AI enabled, you'll get:"
+                android:textColor="@color/text_light"
+                android:fontFamily="@font/poppins_medium"
+                android:textSize="14sp"
+                android:textAlignment="center"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="✨ Personalized wellness techniques\n🎵 Music curated for your mood\n💬 Empathetic AI companion responses"
+                android:textColor="@color/hint_color"
+                android:fontFamily="@font/poppins_regular"
+                android:textSize="13sp"
+                android:textAlignment="center"
+                android:lineSpacingMultiplier="1.5"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Enable Button -->
+            <Button
+                android:id="@+id/btnEnableAI"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:text="Enable AI Features"
+                android:textColor="@color/white"
+                android:backgroundTint="@color/accent_orange"
+                android:fontFamily="@font/poppins_semibold"
+                android:textSize="14sp"
+                android:paddingHorizontal="32dp" />
+
+            <!-- Privacy note -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Your privacy matters. You'll see exactly what data is shared before enabling."
+                android:textColor="@color/hint_color"
+                android:fontFamily="@font/poppins_regular"
+                android:textSize="11sp"
+                android:textAlignment="center"
+                android:fontStyle="italic" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
 </androidx.core.widget.NestedScrollView>
