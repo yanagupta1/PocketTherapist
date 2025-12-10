@@ -298,15 +298,19 @@ class HomeFragment : Fragment() {
         // Animate mic back to plus
         animateFabIcon(R.drawable.ic_plus)
 
+        // Check for crisis language IMMEDIATELY before saving (check both title and text)
+        val hasCrisisLanguage = CrisisDetector.containsCrisisLanguage(title) ||
+                                CrisisDetector.containsCrisisLanguage(text)
+
         // Save if there's text
         if (text.isNotEmpty()) {
             val entryBeingEdited = editingEntry
             if (entryBeingEdited != null) {
                 // Update existing entry
-                updateJournalEntry(entryBeingEdited.id, title, text, mood)
+                updateJournalEntry(entryBeingEdited.id, title, text, mood, hasCrisisLanguage)
             } else {
                 // Create new entry
-                saveJournalEntry(title, text, mood)
+                saveJournalEntry(title, text, mood, hasCrisisLanguage)
             }
         }
 
@@ -327,7 +331,12 @@ class HomeFragment : Fragment() {
         )
     }
 
-    private fun saveJournalEntry(title: String, text: String, mood: String) {
+    private fun saveJournalEntry(title: String, text: String, mood: String, hasCrisisLanguage: Boolean) {
+        // Show crisis alert IMMEDIATELY if crisis language detected
+        if (hasCrisisLanguage) {
+            CrisisDetector.showCrisisAlert(requireActivity())
+        }
+
         UserStore.saveJournalEntry(
             title = title,
             text = text,
@@ -336,10 +345,8 @@ class HomeFragment : Fragment() {
                 journalEntries.add(0, entry)
                 updateList()
 
-                // Check for crisis language first - this takes priority (no AI needed)
-                if (CrisisDetector.containsCrisisLanguage(text)) {
-                    CrisisDetector.showCrisisAlert(requireContext())
-                } else {
+                // Only show companion response if NO crisis language
+                if (!hasCrisisLanguage) {
                     // Check for AI consent before showing companion response
                     AIConsentManager.requireConsentForAI(
                         context = requireContext(),
@@ -510,7 +517,12 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun updateJournalEntry(entryId: String, newTitle: String, newText: String, newMood: String) {
+    private fun updateJournalEntry(entryId: String, newTitle: String, newText: String, newMood: String, hasCrisisLanguage: Boolean) {
+        // Show crisis alert IMMEDIATELY if crisis language detected
+        if (hasCrisisLanguage) {
+            CrisisDetector.showCrisisAlert(requireActivity())
+        }
+
         UserStore.updateJournalEntry(
             entryId = entryId,
             newTitle = newTitle,
@@ -524,11 +536,6 @@ class HomeFragment : Fragment() {
                     updateList()
                 }
                 Toast.makeText(requireContext(), "Entry updated", Toast.LENGTH_SHORT).show()
-
-                // Check for crisis language after update
-                if (CrisisDetector.containsCrisisLanguage(newText)) {
-                    CrisisDetector.showCrisisAlert(requireContext())
-                }
             },
             onFailure = { error ->
                 Toast.makeText(requireContext(), "Failed to update: $error", Toast.LENGTH_SHORT).show()
